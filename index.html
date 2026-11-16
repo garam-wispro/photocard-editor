@@ -251,14 +251,14 @@ function syncStrip(){const sig=sigNow();
 const num=(v,m=1)=>Math.round(v*m*100)/100;
 function F(label,k,o={}){return `<label class="f">${label}<input type="number" data-k="${k}" data-m="${o.m||1}" ${o.min!=null?`min="${o.min}"`:''} step="${o.step||1}"></label>`}
 function buildProps(){
-  if(!sel()){props.innerHTML='<div class="empty">카드 위의 이미지를 클릭하면 여기서 편집할 수 있습니다.</div>';return}
+  if(!sel()){props.innerHTML='<div class="empty">이미지를 추가하면 여기서 위치와 크기를 조절할 수 있습니다.</div>';return}
   props.innerHTML=`<div class="dpi" id="dpiInfo"></div>
   <div class="row"><button data-act="cover">카드 채우기</button><button data-act="contain">전체 보이기</button></div>
   <div class="row">${F('X(mm)','x',{step:.5})}${F('Y(mm)','y',{step:.5})}</div>
   <div class="row">${F('크기(%)','scale',{m:100,min:1})}${F('회전(°)','rot')}</div>
   <div class="row"><label class="c"><input type="checkbox" data-k="gray">흑백</label></div>
-  <div class="row"><button data-act="cH">가로 중앙</button><button data-act="cV">세로 중앙</button><button data-act="flip">좌우 반전</button></div>
-  <div class="row"><button data-act="up">앞으로</button><button data-act="down">뒤로</button><button data-act="del">삭제</button></div>`;
+  <div class="row"><button data-act="cH">가로 중앙</button><button data-act="cV">세로 중앙</button></div>
+  <div class="row"><button data-act="flip">좌우 반전</button><button data-act="del">삭제</button></div>`;
   syncProps()}
 function syncProps(skip){const l=sel();if(!l)return;
   props.querySelectorAll('[data-k]').forEach(el=>{if(el===skip)return;const k=el.dataset.k;
@@ -279,14 +279,16 @@ function syncCard(){
   $('#tgGuide').classList.toggle('on',showGuides);$('#tgPrev').classList.toggle('on',preview);
   $('#expInfo').textContent=`EPS 1개 = ${fw}×${fh}mm 실제 크기, ${px(fw)}×${px(fh)}px RGB 이미지. 빈 면은 제외됩니다.`;
   $('#hint').innerHTML=preview?'재단 후 완성 모습입니다':`<i class="c1">━ 재단선</i><i class="c2">┅ 안전선 (중요 요소는 안쪽에)</i><i>분홍 영역 = 잘려 나가는 여유</i>`}
-function refresh(){if(selId&&!sel())selId=null;syncCard();buildProps();buildLayers();syncStrip();render()}
+function refresh(){if(selId&&!sel())selId=null;
+  if(!selId){const a=cur().layers.filter(l=>!l.hidden);if(a.length)selId=a[a.length-1].id} // 클릭하지 않아도 맨 위 이미지를 바로 조작
+  syncCard();buildProps();buildLayers();syncStrip();render()}
 
 props.addEventListener('input',e=>{const t=e.target,l=sel(),k=t.dataset.k;if(!l||!k)return;let v;
   if(t.type==='checkbox')v=t.checked;else{v=parseFloat(t.value);if(isNaN(v))return;v/=(+t.dataset.m||1);if(k==='scale')v=Math.max(.01,v)}
   l[k]=v;syncProps(t);render()});
 props.addEventListener('change',e=>{if(e.target.dataset.k)commit()});
 props.addEventListener('click',e=>{const a=e.target.dataset.act,l=sel();if(!a||!l)return;
-  if(a==='del')return removeSel();if(a==='up')return moveZ(l.id,1);if(a==='down')return moveZ(l.id,-1);
+  if(a==='del')return removeSel();
   if(a==='cover'||a==='contain')fit(l,a);else if(a==='cH')l.x=D().W/2;else if(a==='cV')l.y=D().H/2;else if(a==='flip')l.flipX=!l.flipX;
   commit();syncProps();render()});
 layersEl.addEventListener('click',e=>{const row=e.target.closest('.layer');if(!row)return;const id=row.dataset.id,la=e.target.dataset.la;
@@ -304,7 +306,7 @@ function hitHandle(l,p){const h=handles(l,p.v),near=(q,r)=>Math.hypot(q.x-p.sx,q
   if(near(h.rot,11))return'rot';if(h.cs.some(q=>near(q,11)))return'scale';return null}
 cv.addEventListener('pointerdown',e=>{
   if(preview||busy||e.button!==0)return;const p=evPt(e);let l=sel(),mode=l?hitHandle(l,p):null;
-  if(!mode){const hit=hitTest(p);if((hit?hit.id:null)!==selId){selId=hit?hit.id:null;refresh()}l=hit;if(l)mode='move'}
+  if(!mode){const hit=hitTest(p);if(hit&&hit.id!==selId){selId=hit.id;refresh()}l=hit;if(l)mode='move'}
   if(!mode)return;
   drag={mode,px:p.x,py:p.y,x:l.x,y:l.y,scale:l.scale,rot:l.rot,d0:Math.hypot(p.x-l.x,p.y-l.y)||1,a0:Math.atan2(p.y-l.y,p.x-l.x),moved:false};
   cv.setPointerCapture(e.pointerId)});
@@ -333,7 +335,6 @@ addEventListener('keydown',e=>{
   if(mod&&key==='y'){e.preventDefault();redo();return}
   if(key==='pageup'){e.preventDefault();selectCard(ci-1);return}
   if(key==='pagedown'){e.preventDefault();selectCard(ci+1);return}
-  if(key==='escape'){selId=null;refresh();return}
   const l=sel();if(!l)return;
   if(key==='delete'||key==='backspace'){e.preventDefault();removeSel();return}
   const d=e.shiftKey?2:.5,mv={arrowleft:[-d,0],arrowright:[d,0],arrowup:[0,-d],arrowdown:[0,d]}[key];
