@@ -95,6 +95,23 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 #expStatus:empty{display:none}
 .dpiRow{display:flex;align-items:center;justify-content:flex-end;gap:6px;font-size:11px;color:var(--mut)}
 .dpiRow select{width:auto;padding:2px 4px;font-size:11px;min-height:0}
+/* 왼쪽 패널 여백: 묶음 사이는 넓게, 묶음 안은 고르게 */
+#left{padding:16px 14px 28px}
+#left h2{margin:0 0 12px}
+#left h2:not(:first-child){margin-top:26px;padding-top:20px;border-top:1px solid var(--line)}
+#left #orientSeg{margin-bottom:12px!important}
+#left .seg button,#left button.full{padding:9px 10px}
+#left .spec{padding:11px 13px;line-height:1.85;margin-bottom:12px}
+#left .full{margin-bottom:12px}
+#left #orientAll{margin-bottom:0}
+#left .backOpt{margin:4px 2px 16px}
+#left .save{margin-top:28px;padding:18px 16px 14px}
+#left .saveT{margin-bottom:16px}
+#left .save label.f{margin-bottom:16px}
+#left .save label.f input{margin-top:7px;padding:8px 10px}
+#left #total{margin:2px 0 12px}
+#left .save .full{margin-bottom:14px}
+#left #expStatus{margin:-4px 0 12px;line-height:1.6}
 #fab{display:none;position:absolute;left:8px;top:8px;z-index:2}
 button{touch-action:manipulation}
 #inapp{background:var(--warnbg);color:var(--warnfg);padding:8px 12px;font-size:13px;line-height:1.6}
