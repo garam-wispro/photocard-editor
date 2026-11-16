@@ -131,7 +131,8 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 <script>
 const $=s=>document.querySelector(s);
 const cv=$('#cv'),ctx=cv.getContext('2d'),stage=$('#stage'),props=$('#props'),layersEl=$('#layers'),thumbsEl=$('#thumbs');
-const SPEC={L:85.5,S:54,bleed:.5,safe:3,radius:3}; // 고정 규격: 재단 85.5×54, 작업 86.5×55, 타공 없음
+const SPEC={L:85.5,S:54,FL:86.5,FS:54.9,radius:3}; // 고정 규격: 재단 85.5×54, 작업(이미지) 86.5×54.9, 타공 없음
+const BL=(SPEC.FL-SPEC.L)/2,BS=(SPEC.FS-SPEC.S)/2; // 재단선 바깥 여유: 긴 변 방향 0.5, 짧은 변 방향 0.45
 const KO={portrait:'세로형',landscape:'가로형'};
 let uidN=0;const uid=()=>'i'+Date.now().toString(36)+(uidN++).toString(36);
 const blank=()=>({layers:[]});
@@ -140,7 +141,7 @@ let state={cards:[newCard('portrait')],commonBack:false,common:{portrait:blank()
 const assets={}; // id → {blob,img}
 let ci=0,side='front',selId=null,showGuides=true,preview=false,drag=null,snapV=false,snapH=false,hist=[],hi=-1,stripSig='',busy=false;
 const rad=d=>d*Math.PI/180;
-const dims=o=>o==='landscape'?{W:SPEC.L,H:SPEC.S}:{W:SPEC.S,H:SPEC.L};
+const dims=o=>o==='landscape'?{W:SPEC.L,H:SPEC.S,FW:SPEC.FL,FH:SPEC.FS,bx:BL,by:BS}:{W:SPEC.S,H:SPEC.L,FW:SPEC.FS,FH:SPEC.FL,bx:BS,by:BL};
 const card=()=>state.cards[ci];
 const D=()=>dims(card().orient);
 const sideOf=(c,s)=>s==='back'&&state.commonBack?state.common[c.orient]:c[s];
@@ -159,14 +160,14 @@ function histBtns(){$('#undo').disabled=hi<=0;$('#redo').disabled=hi>=hist.lengt
 function drawLayer(c,l){const a=assets[l.asset];if(!a||!a.img.complete||!a.img.naturalWidth)return;
   c.save();c.translate(l.x,l.y);c.rotate(rad(l.rot));c.scale(l.scale*(l.flipX?-1:1),l.scale);
   c.filter=l.gray?'grayscale(1)':'none';c.drawImage(a.img,-l.w/2,-l.h/2,l.w,l.h);c.restore()}
-function drawCard(c,k,ox,oy,sd,clip,W,H){const b=SPEC.bleed;
+function drawCard(c,k,ox,oy,sd,clip,dm){const {W,H,FW,FH,bx,by}=dm;
   c.save();c.translate(ox,oy);c.scale(k,k);c.beginPath();
-  if(clip==='trim')c.roundRect(0,0,W,H,SPEC.radius);else c.rect(-b,-b,W+2*b,H+2*b);
-  c.clip();c.fillStyle='#ffffff';c.fillRect(-b,-b,W+2*b,H+2*b);
+  if(clip==='trim')c.roundRect(0,0,W,H,SPEC.radius);else c.rect(-bx,-by,FW,FH);
+  c.clip();c.fillStyle='#ffffff';c.fillRect(-bx,-by,FW,FH);
   for(const l of sd.layers)if(!l.hidden)drawLayer(c,l);
   c.restore()}
-function view(){const r=stage.getBoundingClientRect(),b=SPEC.bleed,{W,H}=D();
-  const k=Math.max(.5,Math.min((r.width-90)/(W+2*b),(r.height-100)/(H+2*b)));
+function view(){const r=stage.getBoundingClientRect(),{W,H,FW,FH}=D();
+  const k=Math.max(.5,Math.min((r.width-90)/FW,(r.height-100)/FH));
   return{k,ox:(r.width-W*k)/2,oy:(r.height-H*k)/2-6,cw:r.width,ch:r.height}}
 function corners(l){const c=Math.cos(rad(l.rot)),s=Math.sin(rad(l.rot)),hw=l.w*l.scale/2,hh=l.h*l.scale/2;
   return[[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(([x,y])=>({x:l.x+x*c-y*s,y:l.y+x*s+y*c}))}
@@ -177,22 +178,21 @@ function render(){
   const v=view(),dpr=window.devicePixelRatio||1,pw=Math.round(v.cw*dpr),ph=Math.round(v.ch*dpr);
   if(cv.width!==pw||cv.height!==ph){cv.width=pw;cv.height=ph;cv.style.width=v.cw+'px';cv.style.height=v.ch+'px'}
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,v.cw,v.ch);
-  const {W,H}=D(),b=SPEC.bleed,s=SPEC.safe,R=SPEC.radius,k=v.k;
+  const dm=D(),{W,H,FW,FH,bx,by}=dm,R=SPEC.radius,k=v.k;
   ctx.save();ctx.shadowColor='rgba(0,0,0,.55)';ctx.shadowBlur=28;ctx.shadowOffsetY=8;ctx.fillStyle='#fff';ctx.beginPath();
-  if(preview)ctx.roundRect(v.ox,v.oy,W*k,H*k,R*k);else ctx.rect(v.ox-b*k,v.oy-b*k,(W+2*b)*k,(H+2*b)*k);
+  if(preview)ctx.roundRect(v.ox,v.oy,W*k,H*k,R*k);else ctx.rect(v.ox-bx*k,v.oy-by*k,FW*k,FH*k);
   ctx.fill();ctx.restore();
-  drawCard(ctx,k,v.ox,v.oy,cur(),preview?'trim':'bleed',W,H);
+  drawCard(ctx,k,v.ox,v.oy,cur(),preview?'trim':'bleed',dm);
   if(preview)return;
   if(!cur().layers.length){ctx.fillStyle='#b5b8c2';ctx.font='13px "Noto Sans KR","Malgun Gothic",sans-serif';ctx.textAlign='center';
     ctx.fillText('이미지를 끌어다 놓거나',v.ox+W*k/2,v.oy+H*k/2-8);ctx.fillText('왼쪽에서 넣어 주세요',v.ox+W*k/2,v.oy+H*k/2+12)}
   if(showGuides){ctx.save();
-    ctx.beginPath();ctx.rect(v.ox-b*k,v.oy-b*k,(W+2*b)*k,(H+2*b)*k);ctx.roundRect(v.ox,v.oy,W*k,H*k,R*k);ctx.fillStyle='rgba(255,45,120,.16)';ctx.fill('evenodd');
+    ctx.beginPath();ctx.rect(v.ox-bx*k,v.oy-by*k,FW*k,FH*k);ctx.roundRect(v.ox,v.oy,W*k,H*k,R*k);ctx.fillStyle='rgba(255,45,120,.16)';ctx.fill('evenodd');
     ctx.lineWidth=1.25;ctx.strokeStyle='#ff2d78';ctx.beginPath();ctx.roundRect(v.ox,v.oy,W*k,H*k,R*k);ctx.stroke();
-    ctx.setLineDash([5,4]);ctx.strokeStyle='#19b8ff';ctx.beginPath();ctx.roundRect(v.ox+s*k,v.oy+s*k,(W-2*s)*k,(H-2*s)*k,Math.max(0,R-s)*k);ctx.stroke();
     ctx.restore()}
   ctx.save();ctx.strokeStyle='#ffd400';ctx.lineWidth=1;ctx.setLineDash([4,3]);
-  if(snapV){ctx.beginPath();ctx.moveTo(v.ox+W*k/2,v.oy-b*k-12);ctx.lineTo(v.ox+W*k/2,v.oy+(H+b)*k+12);ctx.stroke()}
-  if(snapH){ctx.beginPath();ctx.moveTo(v.ox-b*k-12,v.oy+H*k/2);ctx.lineTo(v.ox+(W+b)*k+12,v.oy+H*k/2);ctx.stroke()}
+  if(snapV){ctx.beginPath();ctx.moveTo(v.ox+W*k/2,v.oy-by*k-12);ctx.lineTo(v.ox+W*k/2,v.oy+(H+by)*k+12);ctx.stroke()}
+  if(snapH){ctx.beginPath();ctx.moveTo(v.ox-bx*k-12,v.oy+H*k/2);ctx.lineTo(v.ox+(W+bx)*k+12,v.oy+H*k/2);ctx.stroke()}
   ctx.restore();
   const l=sel();
   if(l){const h=handles(l,v);ctx.save();ctx.strokeStyle='#ff4d8d';ctx.lineWidth=1.5;ctx.beginPath();
@@ -204,8 +204,10 @@ function render(){
 }
 
 /* ---------- 이미지·레이어 ---------- */
-function fit(l,mode,dm){const {W,H}=dm||D(),b=SPEC.bleed;
-  l.scale=mode==='cover'?Math.max((W+2*b)/l.w,(H+2*b)/l.h):Math.min(W/l.w,H/l.h);l.x=W/2;l.y=H/2;l.rot=0}
+function fit(l,mode,dm){const {W,H,FW,FH}=dm||D();
+  l.scale=mode==='cover'?Math.max(FW/l.w,FH/l.h):Math.min(W/l.w,H/l.h);l.x=W/2;l.y=H/2;l.rot=0}
+function fitAxis(l,ax){const {W,H,FW,FH}=D(),a=rad(l.rot),c=Math.abs(Math.cos(a)),s=Math.abs(Math.sin(a)); // 작업 사이즈의 가로폭/세로폭에 딱 맞춤(회전 반영)
+  if(ax==='w'){l.scale=FW/(l.w*c+l.h*s);l.x=W/2}else{l.scale=FH/(l.w*s+l.h*c);l.y=H/2}}
 function addImage(blob){return new Promise(res=>{const url=URL.createObjectURL(blob),img=new Image();
   img.onload=()=>{const id=uid();assets[id]={blob,img};
     const l={id:uid(),asset:id,x:0,y:0,w:img.naturalWidth/300*25.4,h:img.naturalHeight/300*25.4,scale:1,rot:0,flipX:false,hidden:false,gray:false};
@@ -229,14 +231,14 @@ function selectCard(i){if(i<0||i>=state.cards.length||i===ci)return;ci=i;selId=n
 function addCard(){state.cards.splice(ci+1,0,newCard(card().orient));ci++;side='front';selId=null;commit();refresh()}
 function delCard(){if(state.cards.length===1)state.cards[0]=newCard(card().orient);else{state.cards.splice(ci,1);ci=Math.min(ci,state.cards.length-1)}selId=null;commit();refresh()}
 function moveCard(d){const j=ci+d,a=state.cards;if(j<0||j>=a.length)return;[a[ci],a[j]]=[a[j],a[ci]];ci=j;commit();refresh()}
-function reorient(c,o){if(c.orient===o)return;const od=dims(c.orient),nd=dims(o),b=SPEC.bleed,e=.05;
+function reorient(c,o){if(c.orient===o)return;const od=dims(c.orient),nd=dims(o),e=.05;
   for(const s of[c.front,c.back])for(const l of s.layers){const hw=l.w*l.scale/2,hh=l.h*l.scale/2; // 꽉 채우던 이미지는 전환 후에도 꽉 채운다
-    const full=l.rot===0&&l.x-hw<=-b+e&&l.x+hw>=od.W+b-e&&l.y-hh<=-b+e&&l.y+hh>=od.H+b-e;
+    const full=l.rot===0&&l.x-hw<=-od.bx+e&&l.x+hw>=od.W+od.bx-e&&l.y-hh<=-od.by+e&&l.y+hh>=od.H+od.by-e;
     if(full)fit(l,'cover',nd);else{l.x=l.x/od.W*nd.W;l.y=l.y/od.H*nd.H}}
   c.orient=o}
 function drawThumb(el,c){const {W,H}=dims(c.orient),k=70/SPEC.L,dpr=2;
   el.width=Math.round(W*k*dpr);el.height=Math.round(H*k*dpr);el.style.width=W*k+'px';el.style.height=H*k+'px';
-  drawCard(el.getContext('2d'),k*dpr,0,0,c.front,'trim',W,H)}
+  drawCard(el.getContext('2d'),k*dpr,0,0,c.front,'trim',dims(c.orient))}
 function thumbCur(){const el=thumbsEl.children[ci];if(el&&stripSig===sigNow())drawThumb(el.firstChild,card())}
 function syncStrip(){const sig=sigNow();
   if(sig!==stripSig){stripSig=sig;
@@ -258,6 +260,7 @@ function buildProps(){
   <div class="row">${F('크기(%)','scale',{m:100,min:1})}${F('회전(°)','rot')}</div>
   <div class="row"><label class="c"><input type="checkbox" data-k="gray">흑백</label></div>
   <div class="row"><button data-act="cH">가로 중앙</button><button data-act="cV">세로 중앙</button></div>
+  <div class="row"><button data-act="fitW">가로폭 맞추기</button><button data-act="fitH">세로폭 맞추기</button></div>
   <div class="row"><button data-act="flip">좌우 반전</button><button data-act="del">삭제</button></div>`;
   syncProps()}
 function syncProps(skip){const l=sel();if(!l)return;
@@ -271,14 +274,14 @@ function buildLayers(){const a=cur().layers;
   layersEl.innerHTML=[...a].reverse().map((l,i)=>`<div class="layer${l.id===selId?' sel':''}${l.hidden?' hid':''}" data-id="${l.id}"><span class="nm">🖼 이미지 ${a.length-i}</span>
     <button data-la="vis" title="표시/숨김">${l.hidden?'○':'●'}</button><button data-la="up" title="앞으로">▲</button><button data-la="down" title="뒤로">▼</button><button data-la="del" title="삭제">✕</button></div>`).join('')}
 function syncCard(){
-  const {W,H}=D(),b=SPEC.bleed,fw=W+2*b,fh=H+2*b,dpi=+$('#dpi').value,px=mm=>Math.round(mm/25.4*dpi);
+  const {W,H,FW:fw,FH:fh}=D(),dpi=+$('#dpi').value,px=mm=>Math.round(mm/25.4*dpi);
   document.querySelectorAll('#orientSeg button').forEach(x=>x.classList.toggle('on',x.dataset.o===card().orient));
-  $('#spec').innerHTML=`재단 사이즈 <b>${W}×${H}mm</b><br>작업 사이즈 <b>${fw}×${fh}mm</b> (사방 ${b}mm)<br>모서리 R${SPEC.radius}mm · 안전선 ${SPEC.safe}mm · 타공 없음`;
+  $('#spec').innerHTML=`재단 사이즈 <b>${W}×${H}mm</b><br>이미지 사이즈 <b>${fw}×${fh}mm</b><br>모서리 R${SPEC.radius}mm · 타공 없음`;
   document.querySelectorAll('#sideSeg button').forEach(x=>{x.classList.toggle('on',x.dataset.side===side);if(x.dataset.side==='back')x.textContent=state.commonBack?'뒷면(공통)':'뒷면'});
   $('#commonBack').checked=state.commonBack;
   $('#tgGuide').classList.toggle('on',showGuides);$('#tgPrev').classList.toggle('on',preview);
   $('#expInfo').textContent=`EPS 1개 = ${fw}×${fh}mm 실제 크기, ${px(fw)}×${px(fh)}px RGB 이미지. 빈 면은 제외됩니다.`;
-  $('#hint').innerHTML=preview?'재단 후 완성 모습입니다':`<i class="c1">━ 재단선</i><i class="c2">┅ 안전선 (중요 요소는 안쪽에)</i><i>분홍 영역 = 잘려 나가는 여유</i>`}
+  $('#hint').innerHTML=preview?'재단 후 완성 모습입니다':`<i class="c1">━ 재단선</i><i>분홍 영역 = 잘려 나가는 여유</i>`}
 function refresh(){if(selId&&!sel())selId=null;
   if(!selId){const a=cur().layers.filter(l=>!l.hidden);if(a.length)selId=a[a.length-1].id} // 클릭하지 않아도 맨 위 이미지를 바로 조작
   syncCard();buildProps();buildLayers();syncStrip();render()}
@@ -289,7 +292,7 @@ props.addEventListener('input',e=>{const t=e.target,l=sel(),k=t.dataset.k;if(!l|
 props.addEventListener('change',e=>{if(e.target.dataset.k)commit()});
 props.addEventListener('click',e=>{const a=e.target.dataset.act,l=sel();if(!a||!l)return;
   if(a==='del')return removeSel();
-  if(a==='cover'||a==='contain')fit(l,a);else if(a==='cH')l.x=D().W/2;else if(a==='cV')l.y=D().H/2;else if(a==='flip')l.flipX=!l.flipX;
+  if(a==='cover'||a==='contain')fit(l,a);else if(a==='cH')l.x=D().W/2;else if(a==='cV')l.y=D().H/2;else if(a==='flip')l.flipX=!l.flipX;else if(a==='fitW')fitAxis(l,'w');else if(a==='fitH')fitAxis(l,'h');
   commit();syncProps();render()});
 layersEl.addEventListener('click',e=>{const row=e.target.closest('.layer');if(!row)return;const id=row.dataset.id,la=e.target.dataset.la;
   if(la==='vis'){const l=cur().layers.find(x=>x.id===id);l.hidden=!l.hidden;commit();refresh()}
@@ -415,11 +418,11 @@ function zipStore(files,pw){const flag=0x0800|(pw?1:0);
   ev.setUint32(0,0x06054b50,true);ev.setUint16(8,files.length,true);ev.setUint16(10,files.length,true);ev.setUint32(12,cs,true);ev.setUint32(16,off,true);
   return new Blob([...parts,...cen,e],{type:'application/zip'})}
 /*EPS-END*/
-function renderSide(sd,o,dpi,mode){const {W,H}=dims(o),k=dpi/25.4,b=mode==='print'?SPEC.bleed:0,c=document.createElement('canvas');
-  c.width=Math.round((W+2*b)*k);c.height=Math.round((H+2*b)*k);
-  drawCard(c.getContext('2d'),k,b*k,b*k,sd,mode==='print'?'bleed':'trim',W,H);return c}
-function epsOf(sd,o,dpi,title){const c=renderSide(sd,o,dpi,'print'),{W,H}=dims(o),b=SPEC.bleed;
-  return buildEps(c.getContext('2d').getImageData(0,0,c.width,c.height).data,c.width,c.height,W+2*b,H+2*b,title)}
+function renderSide(sd,o,dpi){const dm=dims(o),k=dpi/25.4,c=document.createElement('canvas');
+  c.width=Math.round(dm.FW*k);c.height=Math.round(dm.FH*k);
+  drawCard(c.getContext('2d'),k,dm.bx*k,dm.by*k,sd,'bleed',dm);return c}
+function epsOf(sd,o,dpi,title){const c=renderSide(sd,o,dpi),{FW,FH}=dims(o);
+  return buildEps(c.getContext('2d').getImageData(0,0,c.width,c.height).data,c.width,c.height,FW,FH,title)}
 function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),10000)}
 const ZIP_PW='1234'; // 내려받는 ZIP의 압축 암호
 const status=t=>{$('#expStatus').textContent=t};
