@@ -220,6 +220,11 @@ button{touch-action:manipulation}
 </div>
 
 <script>
+// 새 버전이 올라왔는데 브라우저가 옛 화면을 기억하고 있으면, 열자마자 한 번 새로 받아 온다
+(()=>{if(!/^https?:$/.test(location.protocol))return;
+  fetch(location.pathname,{method:'HEAD',cache:'no-store'}).then(r=>{const lm=Date.parse(r.headers.get('last-modified')||''),cur=Date.parse(document.lastModified);
+    if(!lm||!cur||lm-cur<3000)return;const key='pc_ver_'+lm;try{if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,'1')}catch{return}
+    location.replace(location.pathname+'?v='+lm)}).catch(()=>{})})();
 const $=s=>document.querySelector(s);
 const cv=$('#cv'),ctx=cv.getContext('2d'),stage=$('#stage'),props=$('#props'),layersEl=$('#layers'),thumbsEl=$('#thumbs');
 const SPEC={L:85.5,S:54,FL:86.5,FS:54.9,radius:3}; // 고정 규격: 재단 85.5×54, 작업(이미지) 86.5×54.9, 타공 없음
