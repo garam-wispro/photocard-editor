@@ -93,8 +93,6 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 #total:empty{display:none}
 #expStatus{font-size:12px;color:var(--acc);margin:0 0 8px;text-align:center}
 #expStatus:empty{display:none}
-.dpiRow{display:flex;align-items:center;justify-content:flex-end;gap:6px;font-size:11px;color:var(--mut)}
-.dpiRow select{width:auto;padding:2px 4px;font-size:11px;min-height:0}
 /* 왼쪽 패널 여백: 묶음 사이는 넓게, 묶음 안은 고르게 */
 #left{padding:16px 14px 28px}
 #left h2{margin:0 0 12px}
@@ -110,7 +108,7 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 #left .save label.f{margin-bottom:16px}
 #left .save label.f input{margin-top:7px;padding:8px 10px}
 #left #total{margin:2px 0 12px}
-#left .save .full{margin-bottom:14px}
+#left .save .full{margin-bottom:4px}
 #left #expStatus{margin:-4px 0 12px;line-height:1.6}
 #fab{display:none;position:absolute;left:8px;top:8px;z-index:2}
 button{touch-action:manipulation}
@@ -193,7 +191,6 @@ button{touch-action:manipulation}
     <div id="total"></div>
     <button class="pri full" id="expAll">전체 카드 EPS 받기 (ZIP)</button>
     <div id="expStatus"></div>
-    <label class="dpiRow">해상도<select id="dpi"><option value="300">300 dpi</option><option value="600">600 dpi</option></select></label>
   </div>
 </aside>
 
@@ -425,7 +422,7 @@ function buildLayers(){const a=cur().layers;
   layersEl.innerHTML=[...a].reverse().map((l,i)=>`<div class="layer${l.id===selId?' sel':''}${l.hidden?' hid':''}" data-id="${l.id}"><span class="nm">🖼 이미지 ${a.length-i}</span>
     <button data-la="vis" title="표시/숨김">${l.hidden?'○':'●'}</button><button data-la="up" title="앞으로">▲</button><button data-la="down" title="뒤로">▼</button><button data-la="del" title="삭제">✕</button></div>`).join('')}
 function syncCard(){
-  const {W,H,FW:fw,FH:fh}=D(),dpi=+$('#dpi').value,px=mm=>Math.round(mm/25.4*dpi);
+  const {W,H,FW:fw,FH:fh}=D();
   document.querySelectorAll('#orientSeg button').forEach(x=>x.classList.toggle('on',x.dataset.o===card().orient));
   $('#spec').innerHTML=`재단 사이즈 <b>${W}×${H}mm</b><br>이미지 사이즈 <b>${fw}×${fh}mm</b><br>모서리 R${SPEC.radius}mm · 타공 없음<br>타공이 필요하면 따로 문의해 주세요.`;
   const t=totals();$('#total').textContent=t.kinds?`${t.kinds}종 · 총 ${t.total}장 (단면 ${t.single}장, 양면 ${t.dbl}장)`:'';
@@ -533,7 +530,6 @@ $('#orientAll').onclick=()=>{const o=card().orient;state.cards.forEach(c=>reorie
 $('#commonBack').onchange=e=>{state.commonBack=e.target.checked;const c=card();
   if(state.commonBack&&!state.common[c.orient].layers.length&&c.back.layers.length)state.common[c.orient]=JSON.parse(JSON.stringify(c.back));
   selId=null;commit();refresh()};
-$('#dpi').onchange=syncCard;
 document.querySelectorAll('#sideSeg button').forEach(b=>b.onclick=()=>{side=b.dataset.side;selId=null;refresh()});
 $('#undo').onclick=undo;$('#redo').onclick=redo;
 $('#tgGuide').onclick=()=>{showGuides=!showGuides;refresh()};
@@ -657,6 +653,7 @@ function deliver(blob,name){if(!COARSE)return download(blob,name);
   $('#doneName').textContent=name;$('#doneSave').onclick=()=>download(blob,name);
   $('#doneShare').hidden=!can;$('#doneShare').onclick=()=>navigator.share({files:[file],title:name}).catch(()=>{});
   $('#done').hidden=false}
+const DPI=600; // 저장 해상도는 항상 600dpi
 const ZIP_PW='123123'; // 내려받는 ZIP의 압축 암호
 const status=t=>{$('#expStatus').textContent=t};
 const pad=i=>String(i+1).padStart(Math.max(2,String(state.cards.length).length),'0');
@@ -670,12 +667,12 @@ function exportPlan(){const cards=[],rows=[];
   return{cards,rows}}
 const cleanName=s=>s.replace(/[\/:*?"<>|()\x00-\x1f]/g,'').trim().slice(0,30);
 async function exportAll(){
-  if(busy)return;const dpi=+$('#dpi').value,{cards,rows}=exportPlan(),name=cleanName($('#oname').value),ono=cleanName($('#ono').value);
+  if(busy)return;const dpi=DPI,{cards,rows}=exportPlan(),name=cleanName($('#oname').value),ono=cleanName($('#ono').value);
   if(!cards.length)return alert('내보낼 내용이 없습니다. 카드 앞면에 이미지를 먼저 넣어 주세요.');
   if(!name){alert('주문자명을 입력해 주세요.');$('#oname').focus();return}
   if(!ono){alert('주문번호를 입력해 주세요.');$('#ono').focus();return}
   const nArts=cards.reduce((a,x)=>a+(x.dbl?2:1),0);
-  if(nArts*(SPEC.FL/25.4*dpi)*(SPEC.FS/25.4*dpi)*3>3.8e9)return alert('한 번에 받기에는 용량이 너무 큽니다(4GB 초과). 300dpi로 낮추거나 카드를 나누어 내보내 주세요.');
+  if(nArts*(SPEC.FL/25.4*dpi)*(SPEC.FS/25.4*dpi)*3>3.8e9)return alert('한 번에 받기에는 용량이 너무 큽니다(4GB 초과). 카드를 나누어 내보내 주세요.');
   busy=true;
   try{const t=totals(),cells=[],common={};
     for(let i=0;i<cards.length;i++){const {c,no,q,dbl}=cards[i];status(`대지 만드는 중… ${i+1} / ${cards.length}`);await new Promise(r=>setTimeout(r,0));
