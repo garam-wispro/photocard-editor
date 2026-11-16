@@ -74,6 +74,13 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 .qty button{padding:4px 10px}
 .qty input[type=number]{width:58px;text-align:center}
 #fab{display:none;position:absolute;left:8px;top:8px;z-index:2}
+button{touch-action:manipulation}
+#inapp{background:#3b2a1a;color:#ffb866;padding:8px 12px;font-size:13px;line-height:1.6}
+#inapp button{padding:3px 8px;min-height:0;margin-left:4px}
+#done{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px}
+#done[hidden]{display:none}
+#done .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;width:100%;max-width:360px}
+#doneName{color:var(--mut);font-size:12px;margin:6px 0 12px;word-break:break-all}
 #pv{position:fixed;inset:0;z-index:20;background:rgba(12,13,16,.97);display:flex;flex-direction:column}
 #pv[hidden]{display:none}
 #pvBar{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
@@ -115,6 +122,8 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 </style>
 </head>
 <body>
+<div id="inapp" hidden>앱 안의 화면에서는 파일 저장이 안 될 수 있습니다. 크롬이나 사파리에서 열어 주세요.
+  <button id="inappBtn" hidden>기본 브라우저로 열기</button> <button id="inappCopy">주소 복사</button></div>
 <header>
   <h1>낭만인쇄소 <b>포토카드</b> 에디터</h1>
   <div class="seg" id="sideSeg"><button data-side="front" class="on">앞면</button><button data-side="back">뒷면</button></div>
@@ -178,6 +187,15 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 </aside>
 </main>
 
+<div id="done" hidden><div class="box">
+  <b>파일이 준비됐습니다</b>
+  <div id="doneName"></div>
+  <button class="pri full" id="doneSave">파일 저장</button>
+  <button class="full" id="doneShare" hidden>공유하기 (카톡·메일 등)</button>
+  <small>저장한 ZIP 파일을 주문하신 곳으로 보내 주세요.</small>
+  <button class="full" id="doneClose" style="margin-top:8px">닫기</button>
+</div></div>
+
 <div id="pv" hidden>
   <div id="pvBar"><div><b>전체 미리보기</b> <span id="pvSum"></span></div><button id="pvClose" class="pri">닫기 ✕</button></div>
   <div id="pvGrid"></div>
@@ -194,6 +212,9 @@ const blank=()=>({layers:[]});
 const newCard=o=>({id:uid(),orient:o,qty:1,front:blank(),back:blank()});
 const qtyOf=c=>Math.min(9999,Math.max(1,Math.floor(+c.qty)||1));
 const COARSE=matchMedia('(pointer:coarse)').matches,HR=COARSE?22:11,HS=COARSE?8:5; // 손가락용으로 조절점을 크게
+const MAXPX=COARSE?2600:4000; // 보관하는 이미지의 긴 변 최대 픽셀(600dpi 인쇄에 필요한 2043px보다 충분히 큼)
+if(!CanvasRenderingContext2D.prototype.roundRect)CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){ // 구형 휴대폰 브라우저용
+  r=Math.max(0,Math.min(+r||0,w/2,h/2));this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath()};
 let state={cards:[newCard('portrait')],commonBack:false,common:{portrait:blank(),landscape:blank()}};
 const assets={}; // id → {blob,img}
 let ci=0,side='front',selId=null,showGuides=true,preview=false,drag=null,snapV=false,snapH=false,hist=[],hi=-1,stripSig='',busy=false;
@@ -214,9 +235,13 @@ function redo(){if(hi<hist.length-1){hi++;restore()}}
 function histBtns(){$('#undo').disabled=hi<=0;$('#redo').disabled=hi>=hist.length-1}
 
 /* ---------- 그리기 ---------- */
-function drawLayer(c,l){const a=assets[l.asset];if(!a||!a.img.complete||!a.img.naturalWidth)return;
+function grayOf(a){if(a.gray)return a.gray; // 흑백본을 직접 만들어 둔다(아이폰 사파리는 canvas filter 미지원)
+  const c=document.createElement('canvas');c.width=a.w;c.height=a.h;const x=c.getContext('2d');x.drawImage(a.img,0,0,a.w,a.h);
+  const d=x.getImageData(0,0,a.w,a.h),p=d.data;for(let i=0;i<p.length;i+=4){const v=(p[i]*.299+p[i+1]*.587+p[i+2]*.114)|0;p[i]=p[i+1]=p[i+2]=v}
+  x.putImageData(d,0,0);return a.gray=c}
+function drawLayer(c,l){const a=assets[l.asset];if(!a)return;
   c.save();c.translate(l.x,l.y);c.rotate(rad(l.rot));c.scale(l.scale*(l.flipX?-1:1),l.scale);
-  c.filter=l.gray?'grayscale(1)':'none';c.drawImage(a.img,-l.w/2,-l.h/2,l.w,l.h);c.restore()}
+  c.drawImage(l.gray?grayOf(a):a.img,-l.w/2,-l.h/2,l.w,l.h);c.restore()}
 function drawCard(c,k,ox,oy,sd,clip,dm){const {W,H,FW,FH,bx,by}=dm;
   c.save();c.translate(ox,oy);c.scale(k,k);c.beginPath();
   if(clip==='trim')c.roundRect(0,0,W,H,SPEC.radius);else c.rect(-bx,-by,FW,FH);
@@ -266,8 +291,11 @@ function fit(l,mode,dm){const {W,H,FW,FH}=dm||D();
 function fitAxis(l,ax){const {W,H,FW,FH}=D(),a=rad(l.rot),c=Math.abs(Math.cos(a)),s=Math.abs(Math.sin(a)); // 작업 사이즈의 가로폭/세로폭에 딱 맞춤(회전 반영)
   if(ax==='w'){l.scale=FW/(l.w*c+l.h*s);l.x=W/2}else{l.scale=FH/(l.w*s+l.h*c);l.y=H/2}}
 function addImage(blob){return new Promise(res=>{const url=URL.createObjectURL(blob),img=new Image();
-  img.onload=()=>{const id=uid();assets[id]={blob,img};
-    const l={id:uid(),asset:id,x:0,y:0,w:img.naturalWidth/300*25.4,h:img.naturalHeight/300*25.4,scale:1,rot:0,flipX:false,hidden:false,gray:false};
+  img.onload=()=>{let w=img.naturalWidth,h=img.naturalHeight,src=img;const s=Math.min(1,MAXPX/Math.max(w,h));
+    if(s<1){w=Math.round(w*s);h=Math.round(h*s);const c=document.createElement('canvas');c.width=w;c.height=h; // 큰 사진은 줄여서 보관(휴대폰 메모리 보호)
+      const x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(img,0,0,w,h);src=c;URL.revokeObjectURL(url)}
+    const id=uid();assets[id]={img:src,w,h};
+    const l={id:uid(),asset:id,x:0,y:0,w:w/300*25.4,h:h/300*25.4,scale:1,rot:0,flipX:false,hidden:false,gray:false};
     fit(l,'cover');cur().layers.push(l);selId=l.id;res(true)};
   img.onerror=()=>{URL.revokeObjectURL(url);res(false)};img.src=url})}
 const onlyImages=files=>files.filter(f=>f.type.startsWith('image/'));
@@ -483,7 +511,7 @@ function buildSheet(cells,header,title,ext){
     body.push(raster(c.label,x+PAD,y-PAD,c.label.w*LH/c.label.h,LH));
     c.arts.forEach((a,j)=>{const ax=x+PAD,ay=y-PAD-LH-GAP-j*(AH+GAP);
       boards.push({x1:ax,y1:ay,x2:ax+AW,y2:ay-AH,name:a.name});body.push(raster(a,ax,ay,AW,AH))})});
-  L(`%!PS-Adobe-3.0${ext==='eps'?' EPSF-3.0':' '}`);L('%%Creator: Adobe Illustrator(R) 24.0');L('%%AI8_CreatorVersion: 29.0.0');L(`%%Title: (${title})`);
+  L(`%!PS-Adobe-3.0${ext==='eps'?' EPSF-3.0':' '}`);L('%%Creator: Adobe Illustrator(R) 24.0');L('%%AI8_CreatorVersion: 24.0.0');L(`%%Title: (${title})`);
   L(`%%BoundingBox: 0 0 ${Math.ceil(Wt)} ${Math.ceil(Ht)}`);L(`%%HiResBoundingBox: 0 0 ${f(Wt)} ${f(Ht)}`);
   L('%%DocumentProcessColors: Cyan Magenta Yellow Black');L('%AI5_FileFormat 14.0');L('%AI3_ColorUsage: Color');L('%AI7_ImageSettings: 0');
   L(`%AI3_Cropmarks: ${f(boards[0].x1)} ${f(boards[0].y2)} ${f(boards[0].x2)} ${f(boards[0].y1)}`);
@@ -544,7 +572,13 @@ function textImg(t,px){const c=document.createElement('canvas'),font=`700 ${px}p
   x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.fillStyle='#000';x.font=font;x.textBaseline='middle';x.fillText(t,px*.25,c.height/2+px*.04);
   return toRgb(c)}
 function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),10000)}
-const ZIP_PW='1234'; // 내려받는 ZIP의 압축 암호
+// PC는 바로 저장. 휴대폰은 만든 뒤 버튼을 직접 눌러 저장·공유하게 한다(자동 저장이 막히는 기기 대비).
+function deliver(blob,name){if(!COARSE)return download(blob,name);
+  let file=null,can=false;try{file=new File([blob],name,{type:'application/zip'});can=!!(navigator.canShare&&navigator.canShare({files:[file]}))}catch{}
+  $('#doneName').textContent=name;$('#doneSave').onclick=()=>download(blob,name);
+  $('#doneShare').hidden=!can;$('#doneShare').onclick=()=>navigator.share({files:[file],title:name}).catch(()=>{});
+  $('#done').hidden=false}
+const ZIP_PW='123123'; // 내려받는 ZIP의 압축 암호
 const status=t=>{$('#expStatus').textContent=t};
 const pad=i=>String(i+1).padStart(Math.max(2,String(state.cards.length).length),'0');
 const hasBack=c=>(state.commonBack?state.common[c.orient]:c.back).layers.length>0;
@@ -576,10 +610,18 @@ async function exportAll(){
       `규격: 재단 ${SPEC.L}×${SPEC.S}mm / 대지 ${SPEC.FL}×${SPEC.FS}mm / 모서리 R${SPEC.radius}mm / 타공 없음`,`합계: ${sum}`,`해상도: ${dpi}dpi`,
       '세로형 카드는 대지에 시계 반대 방향으로 90° 돌려 넣었습니다(카드 윗부분이 대지 왼쪽).','','번호 | 방향 | 인쇄 | 수량 | 대지',...rows,''].join('\r\n');
     const files=[{name:base+'.eps',data:buildSheet(cells,header,'photocard','eps')},{name:'주문내역.txt',data:new TextEncoder().encode('﻿'+sheet)}];
-    download(zipStore(files,ZIP_PW),base+'.zip');status(`완료: 대지 ${nArts}개가 들어간 EPS와 주문내역을 암호가 걸린 ZIP으로 저장했습니다.`)}
+    deliver(zipStore(files,ZIP_PW),base+'.zip');status(`완료: 대지 ${nArts}개가 들어간 EPS와 주문내역을 암호가 걸린 ZIP으로 저장했습니다.`)}
   catch(err){status('');alert('내보내기 실패: '+err.message)}
   finally{busy=false}}
 $('#expAll').onclick=exportAll;
+$('#doneClose').onclick=()=>{$('#done').hidden=true};
+// 카카오톡 등 앱 안의 화면에서는 파일 저장이 막히는 경우가 많다 → 기본 브라우저로 안내
+(()=>{const ua=navigator.userAgent,kakao=/KAKAOTALK/i.test(ua);if(!kakao&&!/NAVER\(inapp|Instagram|FBAN|FBAV|Line\//i.test(ua))return;
+  $('#inapp').hidden=false;
+  $('#inappCopy').onclick=()=>{try{navigator.clipboard.writeText(location.href).then(()=>{$('#inappCopy').textContent='복사됨'})}catch{}};
+  if(kakao){const go=()=>{location.href='kakaotalk://web/openExternal?url='+encodeURIComponent(location.href)};
+    $('#inappBtn').hidden=false;$('#inappBtn').onclick=go;
+    try{if(!sessionStorage.getItem('pc_ext')){sessionStorage.setItem('pc_ext','1');go()}}catch{}}})();
 $('#fab').onclick=()=>$('#fileCards').click();
 $('#qMinus').onclick=()=>setQty(qtyOf(card())-1);$('#qPlus').onclick=()=>setQty(qtyOf(card())+1);
 $('#qty').onchange=e=>setQty(e.target.value);
