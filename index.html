@@ -245,13 +245,15 @@ function redo(){if(hi<hist.length-1){hi++;restore()}}
 function histBtns(){$('#undo').disabled=hi<=0;$('#redo').disabled=hi>=hist.length-1}
 
 /* ---------- 그리기 ---------- */
+const AR=l=>l.ar||1,SY=l=>l.scale*AR(l),LOCK=l=>l.lock!==false,CROP=l=>l.crop||{x:0,y:0,w:1,h:1}; // 세로 늘림 비율 · 세로 배율 · 비율 고정 여부 · 자르기 영역(원본 대비 0~1)
+let cropMode=false,cropFor=null;
 function grayOf(a){if(a.gray)return a.gray; // 흑백본을 직접 만들어 둔다(아이폰 사파리는 canvas filter 미지원)
   const c=document.createElement('canvas');c.width=a.w;c.height=a.h;const x=c.getContext('2d');x.drawImage(a.img,0,0,a.w,a.h);
   const d=x.getImageData(0,0,a.w,a.h),p=d.data;for(let i=0;i<p.length;i+=4){const v=(p[i]*.299+p[i+1]*.587+p[i+2]*.114)|0;p[i]=p[i+1]=p[i+2]=v}
   x.putImageData(d,0,0);return a.gray=c}
 function drawLayer(c,l){const a=assets[l.asset];if(!a)return;
-  c.save();c.translate(l.x,l.y);c.rotate(rad(l.rot));c.scale(l.scale*(l.flipX?-1:1),l.scale);
-  c.drawImage(l.gray?grayOf(a):a.img,-l.w/2,-l.h/2,l.w,l.h);c.restore()}
+  c.save();c.translate(l.x,l.y);c.rotate(rad(l.rot));c.scale(l.scale*(l.flipX?-1:1),SY(l));const k=CROP(l);
+  c.drawImage(l.gray?grayOf(a):a.img,k.x*a.w,k.y*a.h,k.w*a.w,k.h*a.h,-l.w/2,-l.h/2,l.w,l.h);c.restore()}
 function drawCard(c,k,ox,oy,sd,clip,dm){const {W,H,FW,FH,bx,by}=dm;
   c.save();c.translate(ox,oy);c.scale(k,k);c.beginPath();
   if(clip==='trim')c.roundRect(0,0,W,H,SPEC.radius);else c.rect(-bx,-by,FW,FH);
@@ -261,11 +263,12 @@ function drawCard(c,k,ox,oy,sd,clip,dm){const {W,H,FW,FH,bx,by}=dm;
 function view(){const r=stage.getBoundingClientRect(),{W,H,FW,FH}=D();
   const k=Math.max(.5,Math.min((r.width-(r.width<500?44:90))/FW,(r.height-(r.width<500?84:100))/FH));
   return{k,ox:(r.width-W*k)/2,oy:(r.height-H*k)/2-6,cw:r.width,ch:r.height}}
-function corners(l){const c=Math.cos(rad(l.rot)),s=Math.sin(rad(l.rot)),hw=l.w*l.scale/2,hh=l.h*l.scale/2;
+function corners(l){const c=Math.cos(rad(l.rot)),s=Math.sin(rad(l.rot)),hw=l.w*l.scale/2,hh=l.h*SY(l)/2;
   return[[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(([x,y])=>({x:l.x+x*c-y*s,y:l.y+x*s+y*c}))}
 function handles(l,v){const cs=corners(l).map(p=>({x:v.ox+p.x*v.k,y:v.oy+p.y*v.k}));
   const tm={x:(cs[0].x+cs[1].x)/2,y:(cs[0].y+cs[1].y)/2},a=rad(l.rot);
-  return{cs,tm,rot:{x:tm.x+Math.sin(a)*26,y:tm.y-Math.cos(a)*26}}}
+  const es=cs.map((p,i)=>{const q=cs[(i+1)%4];return{x:(p.x+q.x)/2,y:(p.y+q.y)/2}}); // 변 가운데 점: 위·오른쪽·아래·왼쪽
+  return{cs,es,tm,rot:{x:tm.x+Math.sin(a)*26,y:tm.y-Math.cos(a)*26}}}
 function render(){
   const v=view(),dpr=window.devicePixelRatio||1,pw=Math.round(v.cw*dpr),ph=Math.round(v.ch*dpr);
   if(cv.width!==pw||cv.height!==ph){cv.width=pw;cv.height=ph;cv.style.width=v.cw+'px';cv.style.height=v.ch+'px'}
@@ -287,19 +290,31 @@ function render(){
   if(snapH){ctx.beginPath();ctx.moveTo(v.ox-bx*k-12,v.oy+H*k/2);ctx.lineTo(v.ox+(W+bx)*k+12,v.oy+H*k/2);ctx.stroke()}
   ctx.restore();
   const l=sel();
-  if(l){const h=handles(l,v);ctx.save();ctx.strokeStyle='#ff4d8d';ctx.lineWidth=1.5;ctx.beginPath();
-    h.cs.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();
-    ctx.beginPath();ctx.moveTo(h.tm.x,h.tm.y);ctx.lineTo(h.rot.x,h.rot.y);ctx.stroke();
-    ctx.fillStyle='#fff';
+  if(l){const h=handles(l,v),a=assets[l.asset];
+    if(cropMode&&a){const F=frameOf(l);ctx.save();ctx.translate(v.ox,v.oy);ctx.scale(k,k);ctx.translate(F.cx,F.cy);ctx.rotate(rad(l.rot));ctx.scale(l.flipX?-1:1,1);
+      ctx.globalAlpha=.32;ctx.drawImage(l.gray?grayOf(a):a.img,-F.fw/2,-F.fh/2,F.fw,F.fh);ctx.restore()} // 잘려 나간 부분을 흐리게 보여 준다
+    ctx.save();ctx.strokeStyle=cropMode?'#ff9d00':'#ff4d8d';ctx.lineWidth=cropMode?2:1.5;if(cropMode)ctx.setLineDash([6,4]);ctx.beginPath();
+    h.cs.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();ctx.setLineDash([]);
+    if(!cropMode){ctx.beginPath();ctx.moveTo(h.tm.x,h.tm.y);ctx.lineTo(h.rot.x,h.rot.y);ctx.stroke()}
+    ctx.fillStyle=cropMode?'#ffd54a':'#fff';
     for(const p of h.cs){ctx.beginPath();ctx.rect(p.x-HS,p.y-HS,HS*2,HS*2);ctx.fill();ctx.stroke()}
-    ctx.beginPath();ctx.arc(h.rot.x,h.rot.y,HS+1,0,7);ctx.fill();ctx.stroke();ctx.restore()}
+    if(cropMode||!LOCK(l))for(const p of h.es){ctx.beginPath();ctx.rect(p.x-HS+1,p.y-HS+1,HS*2-2,HS*2-2);ctx.fill();ctx.stroke()}
+    if(!cropMode){ctx.beginPath();ctx.arc(h.rot.x,h.rot.y,HS+1,0,7);ctx.fill();ctx.stroke()}ctx.restore()}
 }
 
 /* ---------- 이미지·레이어 ---------- */
 function fit(l,mode,dm){const {W,H,FW,FH}=dm||D();
-  l.scale=mode==='cover'?Math.max(FW/l.w,FH/l.h):Math.min(W/l.w,H/l.h);l.x=W/2;l.y=H/2;l.rot=0}
+  const hh=l.h*AR(l);l.scale=mode==='cover'?Math.max(FW/l.w,FH/hh):Math.min(W/l.w,H/hh);l.x=W/2;l.y=H/2;l.rot=0}
 function fitAxis(l,ax){const {W,H,FW,FH}=D(),a=rad(l.rot),c=Math.abs(Math.cos(a)),s=Math.abs(Math.sin(a)); // 작업 사이즈의 가로폭/세로폭에 딱 맞춤(회전 반영)
-  if(ax==='w'){l.scale=FW/(l.w*c+l.h*s);l.x=W/2}else{l.scale=FH/(l.w*s+l.h*c);l.y=H/2}}
+  const hh=l.h*AR(l);if(ax==='w'){l.scale=FW/(l.w*c+hh*s);l.x=W/2}else{l.scale=FH/(l.w*s+hh*c);l.y=H/2}}
+// 자르기: 원본 전체가 카드 위에 놓인 틀(F)을 기준으로, 남길 영역(R, 원본 대비 0~1)만 바꾼다. 그림은 제자리에 있고 보이는 창만 달라진다.
+function frameOf(l){const k=CROP(l),fw=l.w*l.scale/k.w,fh=l.h*SY(l)/k.h,c=Math.cos(rad(l.rot)),s=Math.sin(rad(l.rot));
+  const ox=(.5-(k.x+k.w/2))*fw*(l.flipX?-1:1),oy=(.5-(k.y+k.h/2))*fh;return{fw,fh,cx:l.x+ox*c-oy*s,cy:l.y+ox*s+oy*c}}
+function applyCrop(l,F,R){const cw=R.x1-R.x0,ch=R.y1-R.y0,c=Math.cos(rad(l.rot)),s=Math.sin(rad(l.rot));
+  l.crop={x:R.x0,y:R.y0,w:cw,h:ch};l.w=F.fw*cw/l.scale;l.h=F.fh*ch/SY(l);
+  const ox=((R.x0+R.x1)/2-.5)*F.fw*(l.flipX?-1:1),oy=((R.y0+R.y1)/2-.5)*F.fh;l.x=F.cx+ox*c-oy*s;l.y=F.cy+ox*s+oy*c}
+function normPt(l,F,p){const dx=p.x-F.cx,dy=p.y-F.cy,c=Math.cos(rad(-l.rot)),s=Math.sin(rad(-l.rot));let lx=dx*c-dy*s;if(l.flipX)lx=-lx;
+  return{nx:lx/F.fw+.5,ny:(dx*s+dy*c)/F.fh+.5}}
 function addImage(blob){return new Promise(res=>{const url=URL.createObjectURL(blob),img=new Image();
   img.onload=()=>{let w=img.naturalWidth,h=img.naturalHeight,src=img;const s=Math.min(1,MAXPX/Math.max(w,h));
     if(s<1){w=Math.round(w*s);h=Math.round(h*s);const c=document.createElement('canvas');c.width=w;c.height=h; // 큰 사진은 줄여서 보관(휴대폰 메모리 보호)
@@ -327,7 +342,7 @@ function addCard(){state.cards.splice(ci+1,0,newCard(card().orient));ci++;side='
 function delCard(){if(state.cards.length===1)state.cards[0]=newCard(card().orient);else{state.cards.splice(ci,1);ci=Math.min(ci,state.cards.length-1)}selId=null;commit();refresh()}
 function moveCard(d){const j=ci+d,a=state.cards;if(j<0||j>=a.length)return;[a[ci],a[j]]=[a[j],a[ci]];ci=j;commit();refresh()}
 function reorient(c,o){if(c.orient===o)return;const od=dims(c.orient),nd=dims(o),e=.05;
-  for(const s of[c.front,c.back])for(const l of s.layers){const hw=l.w*l.scale/2,hh=l.h*l.scale/2; // 꽉 채우던 이미지는 전환 후에도 꽉 채운다
+  for(const s of[c.front,c.back])for(const l of s.layers){const hw=l.w*l.scale/2,hh=l.h*SY(l)/2; // 꽉 채우던 이미지는 전환 후에도 꽉 채운다
     const full=l.rot===0&&l.x-hw<=-od.bx+e&&l.x+hw>=od.W+od.bx-e&&l.y-hh<=-od.by+e&&l.y+hh>=od.H+od.by-e;
     if(full)fit(l,'cover',nd);else{l.x=l.x/od.W*nd.W;l.y=l.y/od.H*nd.H}}
   c.orient=o}
@@ -349,12 +364,21 @@ function setQty(v){const q=Math.min(9999,Math.max(1,Math.floor(+v)||1));if(q===q
 /* ---------- UI ---------- */
 const num=(v,m=1)=>Math.round(v*m*100)/100;
 function F(label,k,o={}){return `<label class="f">${label}<input type="number" data-k="${k}" data-m="${o.m||1}" ${o.min!=null?`min="${o.min}"`:''} step="${o.step||1}"></label>`}
+const FIELDS={ // 화면 입력칸 ↔ 이미지 값. 위치는 카드 정가운데가 0
+  px:{get:l=>l.x-D().W/2,set:(l,v)=>{l.x=v+D().W/2}},py:{get:l=>l.y-D().H/2,set:(l,v)=>{l.y=v+D().H/2}},
+  sw:{get:l=>l.w*l.scale,set:(l,v)=>{const h0=l.h*SY(l);l.scale=Math.max(.5,v)/l.w;if(!LOCK(l))l.ar=h0/(l.h*l.scale)}},
+  sh:{get:l=>l.h*SY(l),set:(l,v)=>{v=Math.max(.5,v);if(LOCK(l))l.scale=v/(l.h*AR(l));else l.ar=v/(l.h*l.scale)}},
+  rot:{get:l=>l.rot,set:(l,v)=>{l.rot=v}}};
 function buildProps(){
   if(!sel()){props.innerHTML='<div class="empty">이미지를 추가하면 여기서 위치와 크기를 조절할 수 있습니다.</div>';return}
   props.innerHTML=`<div class="dpi" id="dpiInfo"></div>
   <div class="row"><button data-act="cover">카드 채우기</button><button data-act="contain">전체 보이기</button></div>
-  <div class="row">${F('X(mm)','x',{step:.5})}${F('Y(mm)','y',{step:.5})}</div>
-  <div class="row">${F('크기(%)','scale',{m:100,min:1})}${F('회전(°)','rot')}</div>
+  <div class="row">${F('가로 위치(mm)','px',{step:.5})}${F('세로 위치(mm)','py',{step:.5})}</div>
+  <small style="margin:-2px 0 6px">0 / 0 = 카드 정가운데 (＋는 오른쪽·아래)</small>
+  <div class="row">${F('가로 크기(mm)','sw',{step:.5,min:1})}${F('세로 크기(mm)','sh',{step:.5,min:1})}</div>
+  <div class="row" style="align-items:flex-end"><label class="c" style="padding-bottom:6px"><input type="checkbox" data-k="lock">비율 고정</label>${F('회전(°)','rot')}</div>
+  <div class="row"><button data-act="crop" class="${cropMode?'on':''}">${cropMode?'자르기 끝내기':'✂ 자르기'}</button><button data-act="uncrop">자르기 해제</button></div>
+  ${cropMode?'<small style="margin:-2px 0 6px;color:var(--warnfg)">노란 점을 끌어 남길 부분을 정하세요.</small>':''}
   <div class="row"><label class="c"><input type="checkbox" data-k="gray">흑백</label></div>
   <div class="row"><button data-act="cH">가로 중앙</button><button data-act="cV">세로 중앙</button></div>
   <div class="row"><button data-act="fitW">가로폭 맞추기</button><button data-act="fitH">세로폭 맞추기</button></div>
@@ -362,9 +386,9 @@ function buildProps(){
   syncProps()}
 function syncProps(skip){const l=sel();if(!l)return;
   props.querySelectorAll('[data-k]').forEach(el=>{if(el===skip)return;const k=el.dataset.k;
-    if(el.type==='checkbox')el.checked=!!l[k];else if(el!==document.activeElement)el.value=num(l[k],+el.dataset.m||1)});
+    if(el.type==='checkbox')el.checked=k==='lock'?LOCK(l):!!l[k];else if(el!==document.activeElement)el.value=num(FIELDS[k].get(l))});
   const d=$('#dpiInfo');
-  if(d){const dpi=Math.round(300/l.scale);d.className='dpi'+(dpi<200?' bad':dpi<280?' warn':'');
+  if(d){const dpi=Math.round(300/Math.max(l.scale,SY(l)));d.className='dpi'+(dpi<200?' bad':dpi<280?' warn':'');
     d.textContent=`유효 해상도 ${dpi} dpi`+(dpi<200?' — 인쇄 시 흐릿합니다':dpi<280?' — 다소 낮음(권장 300 이상)':' — 인쇄 적합')}}
 function buildLayers(){const a=cur().layers;
   if(!a.length){layersEl.innerHTML='<div class="empty">이미지가 없습니다.</div>';return}
@@ -382,14 +406,17 @@ function syncCard(){
   $('#hint').innerHTML=preview?'재단 후 완성 모습입니다':`<i class="c1">━ 재단선</i><i>분홍 영역 = 잘려 나가는 여유</i>`}
 function refresh(){if(selId&&!sel())selId=null;
   if(!selId){const a=cur().layers.filter(l=>!l.hidden);if(a.length)selId=a[a.length-1].id} // 클릭하지 않아도 맨 위 이미지를 바로 조작
+  if(cropMode&&cropFor!==selId)cropMode=false;
   syncCard();buildProps();buildLayers();syncStrip();render()}
 
 props.addEventListener('input',e=>{const t=e.target,l=sel(),k=t.dataset.k;if(!l||!k)return;let v;
-  if(t.type==='checkbox')v=t.checked;else{v=parseFloat(t.value);if(isNaN(v))return;v/=(+t.dataset.m||1);if(k==='scale')v=Math.max(.01,v)}
-  l[k]=v;syncProps(t);render()});
+  if(t.type==='checkbox')l[k]=t.checked;else{v=parseFloat(t.value);if(isNaN(v))return;FIELDS[k].set(l,v)}
+  syncProps(t);render()});
 props.addEventListener('change',e=>{if(e.target.dataset.k)commit()});
 props.addEventListener('click',e=>{const a=e.target.dataset.act,l=sel();if(!a||!l)return;
   if(a==='del')return removeSel();
+  if(a==='crop'){cropMode=!cropMode;cropFor=l.id;return refresh()}
+  if(a==='uncrop')applyCrop(l,frameOf(l),{x0:0,y0:0,x1:1,y1:1});else
   if(a==='cover'||a==='contain')fit(l,a);else if(a==='cH')l.x=D().W/2;else if(a==='cV')l.y=D().H/2;else if(a==='flip')l.flipX=!l.flipX;else if(a==='fitW')fitAxis(l,'w');else if(a==='fitH')fitAxis(l,'h');
   commit();syncProps();render()});
 layersEl.addEventListener('click',e=>{const row=e.target.closest('.layer');if(!row)return;const id=row.dataset.id,la=e.target.dataset.la;
@@ -401,10 +428,13 @@ thumbsEl.addEventListener('click',e=>{const t=e.target.closest('.thumb');if(t)se
 /* ---------- 캔버스 포인터 ---------- */
 function evPt(e){const r=cv.getBoundingClientRect(),v=view(),sx=e.clientX-r.left,sy=e.clientY-r.top;return{sx,sy,x:(sx-v.ox)/v.k,y:(sy-v.oy)/v.k,v}}
 function hitTest(p){const a=cur().layers;for(let i=a.length-1;i>=0;i--){const l=a[i];if(l.hidden)continue;
-  const dx=p.x-l.x,dy=p.y-l.y,c=Math.cos(rad(-l.rot)),s=Math.sin(rad(-l.rot)),lx=(dx*c-dy*s)/l.scale,ly=(dx*s+dy*c)/l.scale;
+  const dx=p.x-l.x,dy=p.y-l.y,c=Math.cos(rad(-l.rot)),s=Math.sin(rad(-l.rot)),lx=(dx*c-dy*s)/l.scale,ly=(dx*s+dy*c)/SY(l);
   if(Math.abs(lx)<=l.w/2&&Math.abs(ly)<=l.h/2)return l}return null}
 function hitHandle(l,p){const h=handles(l,p.v),near=(q,r)=>Math.hypot(q.x-p.sx,q.y-p.sy)<=r;
-  if(near(h.rot,HR))return'rot';if(h.cs.some(q=>near(q,HR)))return'scale';return null}
+  if(!cropMode&&near(h.rot,HR))return{t:'rot'};
+  let i=h.cs.findIndex(q=>near(q,HR));if(i>=0)return{t:'corner',i};
+  if(cropMode||!LOCK(l)){i=h.es.findIndex(q=>near(q,HR));if(i>=0)return{t:'edge',i}}
+  return null}
 const pts=new Map();let pinch=null; // 두 손가락 벌리기·오므리기로 크기 조절
 const pinchDist=()=>{const [a,b]=[...pts.values()];return Math.hypot(a.x-b.x,a.y-b.y)||1};
 cv.addEventListener('pointerdown',e=>{
@@ -412,19 +442,29 @@ cv.addEventListener('pointerdown',e=>{
   pts.set(e.pointerId,{x:e.clientX,y:e.clientY});try{cv.setPointerCapture(e.pointerId)}catch{}
   if(pts.size===2){const s=sel();drag=null;snapV=snapH=false;if(s)pinch={d0:pinchDist(),s0:s.scale};return}
   if(pts.size>2)return;
-  const p=evPt(e);let l=sel(),mode=l?hitHandle(l,p):null;
+  const p=evPt(e);let l=sel();const hh=l?hitHandle(l,p):null;let mode=hh?hh.t:null;
   if(!mode){const hit=hitTest(p);if(hit&&hit.id!==selId){selId=hit.id;refresh()}l=hit;if(l)mode='move'}
   if(!mode)return;
-  drag={mode,px:p.x,py:p.y,x:l.x,y:l.y,scale:l.scale,rot:l.rot,d0:Math.hypot(p.x-l.x,p.y-l.y)||1,a0:Math.atan2(p.y-l.y,p.x-l.x),moved:false}});
+  drag={mode,i:hh?hh.i:0,F:cropMode&&hh?frameOf(l):null,h0:l.h*SY(l),px:p.x,py:p.y,x:l.x,y:l.y,scale:l.scale,rot:l.rot,d0:Math.hypot(p.x-l.x,p.y-l.y)||1,a0:Math.atan2(p.y-l.y,p.x-l.x),moved:false}});
 cv.addEventListener('pointermove',e=>{
   if(pts.has(e.pointerId))pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pinch){const s=sel();if(s&&pts.size===2){s.scale=Math.max(.01,pinch.s0*pinchDist()/pinch.d0);syncProps();render()}return}
   const p=evPt(e);
-  if(!drag){if(preview)return;const l=sel(),h=l?hitHandle(l,p):null;cv.style.cursor=h==='rot'?'grab':h==='scale'?'nwse-resize':hitTest(p)?'move':'default';return}
+  if(!drag){if(preview)return;const l=sel(),h=l?hitHandle(l,p):null;cv.style.cursor=!h?(hitTest(p)?'move':'default'):h.t==='rot'?'grab':h.t==='edge'?(h.i%2?'ew-resize':'ns-resize'):'nwse-resize';return}
   const l=sel();if(!l)return;drag.moved=true;const {W,H}=D();
   if(drag.mode==='move'){l.x=drag.x+p.x-drag.px;l.y=drag.y+p.y-drag.py;snapV=snapH=false;
     if(!e.altKey){const t=6/p.v.k;if(Math.abs(l.x-W/2)<t){l.x=W/2;snapV=true}if(Math.abs(l.y-H/2)<t){l.y=H/2;snapH=true}}}
-  else if(drag.mode==='scale')l.scale=Math.max(.01,drag.scale*Math.hypot(p.x-l.x,p.y-l.y)/drag.d0);
+  else if(drag.mode==='corner'||drag.mode==='edge'){
+    if(drag.F){const F=drag.F,q=normPt(l,F,p),k=CROP(l),R={x0:k.x,y0:k.y,x1:k.x+k.w,y1:k.y+k.h},G=.04; // 자르기: 끌고 있는 변만 움직인다
+      const [gx,gy]=(drag.mode==='corner'?[[-1,-1],[1,-1],[1,1],[-1,1]]:[[0,-1],[1,0],[0,1],[-1,0]])[drag.i];
+      if(gx){if((gx<0)!==!!l.flipX)R.x0=Math.min(Math.max(q.nx,0),R.x1-G);else R.x1=Math.max(Math.min(q.nx,1),R.x0+G)}
+      if(gy){if(gy<0)R.y0=Math.min(Math.max(q.ny,0),R.y1-G);else R.y1=Math.max(Math.min(q.ny,1),R.y0+G)}
+      applyCrop(l,F,R)}
+    else{const dx=p.x-l.x,dy=p.y-l.y,c=Math.cos(rad(-l.rot)),s=Math.sin(rad(-l.rot)),lx=Math.abs(dx*c-dy*s),ly=Math.abs(dx*s+dy*c);
+      if(drag.mode==='corner'){if(LOCK(l))l.scale=Math.max(.01,drag.scale*Math.hypot(dx,dy)/drag.d0);
+        else{l.scale=Math.max(1,2*lx)/l.w;l.ar=Math.max(1,2*ly)/(l.h*l.scale)}} // 비율 고정을 풀면 가로·세로를 따로
+      else if(drag.i%2){l.scale=Math.max(1,2*lx)/l.w;l.ar=drag.h0/(l.h*l.scale)}
+      else l.ar=Math.max(1,2*ly)/(l.h*l.scale)}}
   else{let r=drag.rot+(Math.atan2(p.y-l.y,p.x-l.x)-drag.a0)*180/Math.PI;r=((r+180)%360+360)%360-180;
     if(e.shiftKey)r=Math.round(r/15)*15;else if(Math.abs(r)<2)r=0;l.rot=Math.round(r*10)/10}
   syncProps();render()});
@@ -476,7 +516,7 @@ function openPreview(){const grid=$('#pvGrid'),t=totals();grid.innerHTML='';
   $('#pvSum').textContent=t.kinds?`${t.kinds}종 · 총 ${t.total}장 (단면 ${t.single}장, 양면 ${t.dbl}장)`:'';
   if(!t.kinds)grid.innerHTML='<div class="pvEmpty">아직 이미지가 없습니다. 이미지를 먼저 넣어 주세요.</div>';
   state.cards.forEach((c,i)=>{if(!c.front.layers.length)return;const dbl=hasBack(c),back=sideOf(c,'back');
-    const low=[c.front,...(dbl?[back]:[])].some(s=>s.layers.some(l=>!l.hidden&&300/l.scale<200));
+    const low=[c.front,...(dbl?[back]:[])].some(s=>s.layers.some(l=>!l.hidden&&300/Math.max(l.scale,SY(l))<200));
     const cell=document.createElement('div');cell.className='pvCell';
     cell.innerHTML=`<h3>${pad(i)}번 · ${dbl?'양면':'단면'} · ${qtyOf(c)}장 ${low?'<em>⚠ 해상도 낮음</em>':''}</h3><div class="pvSides"></div>`;
     const sides=cell.lastChild,add=(sd,cap)=>{const f=document.createElement('figure');f.appendChild(pvCanvas(sd,c.orient));
