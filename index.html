@@ -387,18 +387,30 @@ function buildEps(rgba,w,h,wmm,hmm,title){
     `/ImageMatrix [${w} 0 0 -${h} 0 ${h}] /DataSource currentfile /ASCII85Decode filter >> image`].join('\n')+'\n';
   const te=new TextEncoder(),a=te.encode(head),b=ascii85(rgb),c=te.encode('grestore\nshowpage\n%%Trailer\n%%EOF\n');
   const out=new Uint8Array(a.length+b.length+c.length);out.set(a);out.set(b,a.length);out.set(c,a.length+b.length);return out}
-// 무압축 ZIP (파일명 UTF-8)
-function zipStore(files){
+// ZIP 표준 암호화(ZipCrypto): 윈도우 탐색기·반디집·알집에서 암호를 물어본다
+function zipCrypt(data,crc,pw){
+  let k0=0x12345678,k1=0x23456789,k2=0x34567890;
+  const upd=c=>{k0=(crcT[(k0^c)&255]^(k0>>>8))>>>0;k1=(k1+(k0&255))>>>0;k1=(Math.imul(k1,134775813)+1)>>>0;k2=(crcT[(k2^(k1>>>24))&255]^(k2>>>8))>>>0};
+  for(const c of new TextEncoder().encode(pw))upd(c);
+  const out=new Uint8Array(data.length+12),hd=new Uint8Array(12);
+  if(globalThis.crypto&&globalThis.crypto.getRandomValues)globalThis.crypto.getRandomValues(hd);else for(let i=0;i<12;i++)hd[i]=Math.random()*256;
+  hd[11]=crc>>>24;
+  const enc=p=>{const t=(k2|2)&0xffff,c=p^(((t*(t^1))>>>8)&255);upd(p);return c};
+  for(let i=0;i<12;i++)out[i]=enc(hd[i]);
+  for(let i=0;i<data.length;i++)out[i+12]=enc(data[i]);
+  return out}
+// 무압축 ZIP (파일명 UTF-8, pw를 주면 암호화)
+function zipStore(files,pw){const flag=0x0800|(pw?1:0);
   const te=new TextEncoder(),parts=[],cen=[],now=new Date();let off=0;
   const dt=((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate(),tm=(now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1);
-  for(const f of files){const nm=te.encode(f.name),crc=crc32(f.data),n=f.data.length;
+  for(const f of files){const nm=te.encode(f.name),crc=crc32(f.data),n=f.data.length,body=pw?zipCrypt(f.data,crc,pw):f.data,cn=body.length;
     const lh=new Uint8Array(30+nm.length),v=new DataView(lh.buffer);
-    v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint16(6,0x0800,true);v.setUint16(10,tm,true);v.setUint16(12,dt,true);
-    v.setUint32(14,crc,true);v.setUint32(18,n,true);v.setUint32(22,n,true);v.setUint16(26,nm.length,true);lh.set(nm,30);
+    v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint16(6,flag,true);v.setUint16(10,tm,true);v.setUint16(12,dt,true);
+    v.setUint32(14,crc,true);v.setUint32(18,cn,true);v.setUint32(22,n,true);v.setUint16(26,nm.length,true);lh.set(nm,30);
     const ch=new Uint8Array(46+nm.length),c=new DataView(ch.buffer);
-    c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint16(12,tm,true);c.setUint16(14,dt,true);
-    c.setUint32(16,crc,true);c.setUint32(20,n,true);c.setUint32(24,n,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);ch.set(nm,46);
-    parts.push(lh,f.data);cen.push(ch);off+=lh.length+n}
+    c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,flag,true);c.setUint16(12,tm,true);c.setUint16(14,dt,true);
+    c.setUint32(16,crc,true);c.setUint32(20,cn,true);c.setUint32(24,n,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);ch.set(nm,46);
+    parts.push(lh,body);cen.push(ch);off+=lh.length+cn}
   const cs=cen.reduce((a,x)=>a+x.length,0),e=new Uint8Array(22),ev=new DataView(e.buffer);
   ev.setUint32(0,0x06054b50,true);ev.setUint16(8,files.length,true);ev.setUint16(10,files.length,true);ev.setUint32(12,cs,true);ev.setUint32(16,off,true);
   return new Blob([...parts,...cen,e],{type:'application/zip'})}
@@ -409,6 +421,7 @@ function renderSide(sd,o,dpi,mode){const {W,H}=dims(o),k=dpi/25.4,b=mode==='prin
 function epsOf(sd,o,dpi,title){const c=renderSide(sd,o,dpi,'print'),{W,H}=dims(o),b=SPEC.bleed;
   return buildEps(c.getContext('2d').getImageData(0,0,c.width,c.height).data,c.width,c.height,W+2*b,H+2*b,title)}
 function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),10000)}
+const ZIP_PW='1234'; // 내려받는 ZIP의 압축 암호
 const status=t=>{$('#expStatus').textContent=t};
 const pad=i=>String(i+1).padStart(Math.max(2,String(state.cards.length).length),'0');
 function exportJobs(){const jobs=[];
@@ -427,7 +440,7 @@ async function exportAll(){
   try{for(let i=0;i<jobs.length;i++){status(`EPS 만드는 중… ${i+1} / ${jobs.length}`);await new Promise(r=>setTimeout(r,0));
       files.push({name:jobs[i].name,data:epsOf(jobs[i].sd,jobs[i].o,dpi,'photocard '+(i+1))})}
     status('ZIP으로 묶는 중…');await new Promise(r=>setTimeout(r,0));
-    download(zipStore(files),`포토카드_${state.cards.length}장_${dpi}dpi.zip`);status(`완료: EPS ${files.length}개를 ZIP으로 저장했습니다.`)}
+    download(zipStore(files,ZIP_PW),`포토카드_${state.cards.length}장_${dpi}dpi.zip`);status(`완료: EPS ${files.length}개를 암호가 걸린 ZIP으로 저장했습니다.`)}
   catch(err){status('');alert('내보내기 실패: '+err.message)}
   finally{busy=false}}
 $('#expAll').onclick=exportAll;
