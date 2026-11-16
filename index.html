@@ -82,17 +82,16 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 .qty{display:flex;align-items:center;gap:5px;margin-bottom:6px}
 .qty button{padding:4px 10px}
 .qty input[type=number]{width:58px;text-align:center}
-.save{margin-top:14px;border:1.5px solid var(--acc);border-radius:12px;padding:12px 12px 10px;background:var(--in)}
-.saveT{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
-.saveT span{font-size:11px;font-weight:700;color:#fff;background:var(--acc);border-radius:20px;padding:1px 8px}
-.step{display:flex;gap:9px;align-items:flex-start;margin-bottom:10px}
-.step>i{flex:none;width:22px;height:22px;border-radius:50%;background:var(--acc);color:#fff;font-style:normal;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;margin-top:1px}
-.step>.f{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;color:var(--fg);font-size:13px;font-weight:700}
-.step .f input{font-weight:400}
-.step .full{margin-bottom:0}
-#total{font-size:12px;font-weight:400;color:var(--mut)}
+.backOpt{margin:6px 2px 12px}
+.save{margin-top:16px;border:1px solid var(--line);border-top:3px solid var(--acc);border-radius:10px;padding:12px;background:var(--in)}
+.saveT{font-size:14px;font-weight:700;margin-bottom:10px}
+.save label.f{display:block;font-size:12px;font-weight:700;color:var(--fg);margin-bottom:10px}
+.save label.f em{font-style:normal;font-weight:400;font-size:11px;color:var(--acc)}
+.save label.f input{display:block;margin-top:4px;font-weight:400}
+.save .full{margin-bottom:8px}
+#total{font-size:12px;color:var(--mut);text-align:center;margin:2px 0 8px}
 #total:empty{display:none}
-#expStatus{font-size:12px;color:var(--acc);margin:-2px 0 8px 31px}
+#expStatus{font-size:12px;color:var(--acc);margin:0 0 8px;text-align:center}
 #expStatus:empty{display:none}
 .dpiRow{display:flex;align-items:center;justify-content:flex-end;gap:6px;font-size:11px;color:var(--mut)}
 .dpiRow select{width:auto;padding:2px 4px;font-size:11px;min-height:0}
@@ -164,19 +163,18 @@ button{touch-action:manipulation}
   <div class="spec" id="spec"></div>
   <button class="full" id="orientAll">모든 카드를 이 방향으로</button>
 
-  <h2>뒷면</h2>
-  <label class="c"><input type="checkbox" id="commonBack">모든 카드가 같은 뒷면 사용</label>
-
   <h2>이미지</h2>
   <button id="addCards" class="pri full">🖼 이미지 추가하기</button>
   <input type="file" id="fileCards" accept="image/*" multiple hidden>
+  <label class="c backOpt"><input type="checkbox" id="commonBack">모든 카드가 같은 뒷면 사용</label>
   <button class="pri full" id="pvBtn">🔍 전체 미리보기</button>
 
   <div class="save">
-    <div class="saveT">저장하기 <span>필수 항목</span></div>
-    <div class="step"><i>1</i><label class="f">주문자명<input type="text" id="oname" maxlength="20" placeholder="주문하신 분 성함" autocomplete="name"></label></div>
-    <div class="step"><i>2</i><label class="f">주문번호<input type="text" id="ono" maxlength="30" placeholder="쇼핑몰 주문번호" inputmode="numeric"></label></div>
-    <div class="step"><i>3</i><div class="f"><span id="total"></span><button class="pri full" id="expAll">전체 카드 EPS 받기 (ZIP)</button></div></div>
+    <div class="saveT">저장하기</div>
+    <label class="f">주문자명 <em>(필수)</em><input type="text" id="oname" maxlength="20" placeholder="주문하신 분 성함" autocomplete="name"></label>
+    <label class="f">주문번호 <em>(필수)</em><input type="text" id="ono" maxlength="30" placeholder="쇼핑몰 주문번호" inputmode="numeric"></label>
+    <div id="total"></div>
+    <button class="pri full" id="expAll">전체 카드 EPS 받기 (ZIP)</button>
     <div id="expStatus"></div>
     <label class="dpiRow">해상도<select id="dpi"><option value="300">300 dpi</option><option value="600">600 dpi</option></select></label>
   </div>
