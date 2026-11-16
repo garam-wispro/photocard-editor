@@ -82,6 +82,20 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 .qty{display:flex;align-items:center;gap:5px;margin-bottom:6px}
 .qty button{padding:4px 10px}
 .qty input[type=number]{width:58px;text-align:center}
+.save{margin-top:14px;border:1.5px solid var(--acc);border-radius:12px;padding:12px 12px 10px;background:var(--in)}
+.saveT{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.saveT span{font-size:11px;font-weight:700;color:#fff;background:var(--acc);border-radius:20px;padding:1px 8px}
+.step{display:flex;gap:9px;align-items:flex-start;margin-bottom:10px}
+.step>i{flex:none;width:22px;height:22px;border-radius:50%;background:var(--acc);color:#fff;font-style:normal;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.step>.f{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;color:var(--fg);font-size:13px;font-weight:700}
+.step .f input{font-weight:400}
+.step .full{margin-bottom:0}
+#total{font-size:12px;font-weight:400;color:var(--mut)}
+#total:empty{display:none}
+#expStatus{font-size:12px;color:var(--acc);margin:-2px 0 8px 31px}
+#expStatus:empty{display:none}
+.dpiRow{display:flex;align-items:center;justify-content:flex-end;gap:6px;font-size:11px;color:var(--mut)}
+.dpiRow select{width:auto;padding:2px 4px;font-size:11px;min-height:0}
 #fab{display:none;position:absolute;left:8px;top:8px;z-index:2}
 button{touch-action:manipulation}
 #inapp{background:var(--warnbg);color:var(--warnfg);padding:8px 12px;font-size:13px;line-height:1.6}
@@ -150,26 +164,22 @@ button{touch-action:manipulation}
   <div class="spec" id="spec"></div>
   <button class="full" id="orientAll">모든 카드를 이 방향으로</button>
 
-  <h2>이미지</h2>
-  <button id="addCards" class="pri full">🖼 이미지 추가하기</button>
-  <input type="file" id="fileCards" accept="image/*" multiple hidden>
-  <small>이미지 1장이 카드 1장이 됩니다. 뒷면을 보는 중에는 그 뒷면에 들어갑니다. 끌어다 놓기·붙여넣기도 됩니다.</small>
-
   <h2>뒷면</h2>
   <label class="c"><input type="checkbox" id="commonBack">모든 카드가 같은 뒷면 사용</label>
 
-  <h2>내보내기</h2>
-  <label class="f" style="margin-bottom:6px">주문자명 (필수)<input type="text" id="oname" maxlength="20" placeholder="주문하신 분 성함" autocomplete="name"></label>
-  <label class="f" style="margin-bottom:6px">주문번호 (필수)<input type="text" id="ono" maxlength="30" placeholder="쇼핑몰 주문번호" inputmode="numeric"></label>
-  <div class="spec" id="total"></div>
+  <h2>이미지</h2>
+  <button id="addCards" class="pri full">🖼 이미지 추가하기</button>
+  <input type="file" id="fileCards" accept="image/*" multiple hidden>
   <button class="pri full" id="pvBtn">🔍 전체 미리보기</button>
-  <div class="row"><select id="dpi"><option value="300">300 dpi</option><option value="600">600 dpi</option></select></div>
-  <button class="pri full" id="expAll">전체 카드 EPS 받기 (ZIP)</button>
-  <small id="expInfo"></small>
-  <small id="expStatus" style="color:var(--acc);margin-top:4px"></small>
 
-  <h2 class="pc">단축키</h2>
-  <small class="pc"><kbd>Del</kbd> 삭제 · <kbd>방향키</kbd> 0.5mm 이동(<kbd>Shift</kbd> 2mm) · <kbd>휠</kbd> 크기 · 회전 중 <kbd>Shift</kbd> 15° · 이동 중 <kbd>Alt</kbd> 스냅 끔 · <kbd>PgUp</kbd>/<kbd>PgDn</kbd> 이전/다음 카드</small>
+  <div class="save">
+    <div class="saveT">저장하기 <span>필수 항목</span></div>
+    <div class="step"><i>1</i><label class="f">주문자명<input type="text" id="oname" maxlength="20" placeholder="주문하신 분 성함" autocomplete="name"></label></div>
+    <div class="step"><i>2</i><label class="f">주문번호<input type="text" id="ono" maxlength="30" placeholder="쇼핑몰 주문번호" inputmode="numeric"></label></div>
+    <div class="step"><i>3</i><div class="f"><span id="total"></span><button class="pri full" id="expAll">전체 카드 EPS 받기 (ZIP)</button></div></div>
+    <div id="expStatus"></div>
+    <label class="dpiRow">해상도<select id="dpi"><option value="300">300 dpi</option><option value="600">600 dpi</option></select></label>
+  </div>
 </aside>
 
 <section id="center">
@@ -398,11 +408,10 @@ function syncCard(){
   const {W,H,FW:fw,FH:fh}=D(),dpi=+$('#dpi').value,px=mm=>Math.round(mm/25.4*dpi);
   document.querySelectorAll('#orientSeg button').forEach(x=>x.classList.toggle('on',x.dataset.o===card().orient));
   $('#spec').innerHTML=`재단 사이즈 <b>${W}×${H}mm</b><br>이미지 사이즈 <b>${fw}×${fh}mm</b><br>모서리 R${SPEC.radius}mm · 타공 없음<br>타공이 필요하면 따로 문의해 주세요.`;
-  const t=totals();$('#total').innerHTML=t.kinds?`<b>${t.kinds}종 · 총 ${t.total}장</b><br>단면 ${t.single}장 · 양면 ${t.dbl}장<br>주문 수량과 같아야 합니다.`:'이미지를 넣으면 종류와 수량 합계가 여기에 나옵니다.';
+  const t=totals();$('#total').textContent=t.kinds?`${t.kinds}종 · 총 ${t.total}장 (단면 ${t.single}장, 양면 ${t.dbl}장)`:'';
   document.querySelectorAll('#sideSeg button').forEach(x=>{x.classList.toggle('on',x.dataset.side===side);if(x.dataset.side==='back')x.textContent=state.commonBack?'뒷면(공통)':'뒷면'});
   $('#commonBack').checked=state.commonBack;
   $('#tgGuide').classList.toggle('on',showGuides);$('#tgPrev').classList.toggle('on',preview);
-  $('#expInfo').textContent=`일러스트레이터용 EPS 1개에 카드마다 대지(${SPEC.FL}×${SPEC.FS}mm)로 들어갑니다. 대지당 ${px(SPEC.FL)}×${px(SPEC.FS)}px RGB.`;
   $('#hint').innerHTML=preview?'재단 후 완성 모습입니다':`<i class="c1">━ 재단선</i><i>분홍 영역 = 잘려 나가는 여유</i>`}
 function refresh(){if(selId&&!sel())selId=null;
   if(!selId){const a=cur().layers.filter(l=>!l.hidden);if(a.length)selId=a[a.length-1].id} // 클릭하지 않아도 맨 위 이미지를 바로 조작
