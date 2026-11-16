@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>포토카드 에디터</title>
+<style>
+:root{--bg:#15161a;--panel:#1e2026;--line:#30333c;--fg:#e8e9ee;--mut:#9a9eab;--acc:#ff4d8d;--acc2:#3ec5ff;--in:#282b33}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:13px/1.45 "Noto Sans KR","Malgun Gothic",sans-serif;display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+header h1{font-size:15px;margin:0 12px 0 0;letter-spacing:-.02em}
+header h1 b{color:var(--acc)}
+.sp{flex:1}
+main{flex:1;display:flex;min-height:0}
+aside{width:270px;flex:none;background:var(--panel);overflow-y:auto;padding:12px}
+#left{border-right:1px solid var(--line)}
+#right{border-left:1px solid var(--line);width:280px}
+#center{flex:1;display:flex;flex-direction:column;min-width:0}
+#stage{flex:1;min-height:0;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 40%,#2a2c35,#15161a 75%)}
+#cv{position:absolute;left:0;top:0;touch-action:none}
+#hint{position:absolute;left:0;right:0;bottom:8px;text-align:center;color:var(--mut);font-size:12px;pointer-events:none}
+#hint i{font-style:normal;display:inline-block;margin:0 8px}
+#hint .c1{color:var(--acc)}#hint .c2{color:var(--acc2)}
+#drop{position:absolute;inset:12px;border:2px dashed var(--acc);border-radius:14px;background:rgba(255,77,141,.08);display:none;align-items:center;justify-content:center;font-size:18px;pointer-events:none}
+#stage.over #drop{display:flex}
+#strip{flex:none;height:122px;display:flex;background:var(--panel);border-top:1px solid var(--line)}
+#stripCtl{flex:none;width:156px;padding:8px 10px;border-right:1px solid var(--line)}
+#cardPos{font-weight:700;margin-bottom:6px}
+#thumbs{flex:1;display:flex;gap:6px;align-items:center;overflow-x:auto;overflow-y:hidden;padding:6px 10px}
+.thumb{flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 6px;border:2px solid transparent;border-radius:8px;cursor:pointer}
+.thumb:hover{background:var(--in)}
+.thumb.sel{border-color:var(--acc);background:#3a2530}
+.thumb canvas{background:#fff;border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.5);display:block}
+.thumb span{font-size:11px;color:var(--mut)}
+h2{font-size:11px;letter-spacing:.08em;color:var(--mut);margin:16px 0 8px;font-weight:700}
+h2:first-child{margin-top:0}
+button,select,input{font:inherit;color:inherit}
+button{background:var(--in);border:1px solid var(--line);border-radius:7px;padding:6px 10px;cursor:pointer;white-space:nowrap}
+button:hover{border-color:#555a68;background:#30343e}
+button:disabled{opacity:.35;cursor:default}
+button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
+button.pri:hover{filter:brightness(1.1)}
+.seg{display:inline-flex}
+.seg button{border-radius:0;margin-left:-1px}
+.seg button:first-child{border-radius:7px 0 0 7px;margin-left:0}
+.seg button:last-child{border-radius:0 7px 7px 0}
+.row{display:flex;gap:6px;margin-bottom:6px;align-items:center;flex-wrap:wrap}
+.row>*{flex:1;min-width:0}
+label.f{display:flex;flex-direction:column;gap:3px;color:var(--mut);font-size:11px}
+label.c{display:flex;align-items:center;gap:6px;color:var(--fg);flex:none}
+input[type=number],select{background:var(--in);border:1px solid var(--line);border-radius:6px;padding:5px 7px;width:100%;color:var(--fg)}
+.full{width:100%;margin-bottom:6px}
+.layer{display:flex;align-items:center;gap:4px;padding:5px 6px;border:1px solid var(--line);border-radius:7px;margin-bottom:4px;cursor:pointer;background:var(--in)}
+.layer.sel{border-color:var(--acc);background:#3a2530}
+.layer.hid .nm{opacity:.4}
+.layer .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.layer button{padding:1px 6px;font-size:11px;border:none;background:transparent;color:var(--mut)}
+.layer button:hover{color:var(--fg)}
+.empty{color:var(--mut);padding:10px 0;font-size:12px}
+.dpi{font-size:12px;padding:6px 8px;border-radius:6px;background:#1d3327;color:#7be0a4;margin-bottom:8px}
+.dpi.warn{background:#3b2a1a;color:#ffb866}
+.dpi.bad{background:#3d1f24;color:#ff8a8a}
+.spec{font-size:12px;line-height:1.7;color:var(--mut);background:var(--in);border:1px solid var(--line);border-radius:7px;padding:7px 9px;margin-bottom:6px}
+.spec b{color:var(--fg);font-weight:700}
+small{color:var(--mut);display:block}
+kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:0 4px;font:11px monospace}
+</style>
+</head>
+<body>
+<header>
+  <h1><b>포토카드</b> 에디터</h1>
+  <div class="seg" id="sideSeg"><button data-side="front" class="on">앞면</button><button data-side="back">뒷면</button></div>
+  <button id="undo" title="Ctrl+Z">↶ 실행 취소</button>
+  <button id="redo" title="Ctrl+Y">↷ 다시 실행</button>
+  <div class="sp"></div>
+  <button id="tgGuide" class="on">가이드선</button>
+  <button id="tgPrev" title="재단 후 모습">완성 미리보기</button>
+</header>
+<main>
+<aside id="left">
+  <h2>이 카드의 방향</h2>
+  <div class="seg" id="orientSeg" style="display:flex;margin-bottom:8px"><button data-o="portrait" style="flex:1">▯ 세로형</button><button data-o="landscape" style="flex:1">▭ 가로형</button></div>
+  <div class="spec" id="spec"></div>
+  <button class="full" id="orientAll">모든 카드를 이 방향으로</button>
+
+  <h2>이미지</h2>
+  <button id="addCards" class="pri full">🖼 이미지 추가하기</button>
+  <input type="file" id="fileCards" accept="image/*" multiple hidden>
+  <small>이미지 1장이 카드 1장이 됩니다. 뒷면을 보는 중에는 그 뒷면에 들어갑니다. 끌어다 놓기·붙여넣기도 됩니다.</small>
+
+  <h2>뒷면</h2>
+  <label class="c"><input type="checkbox" id="commonBack">모든 카드가 같은 뒷면 사용</label>
+
+  <h2>내보내기</h2>
+  <div class="row"><select id="dpi"><option value="300">300 dpi</option><option value="600">600 dpi</option></select></div>
+  <button class="pri full" id="expAll">전체 카드 EPS 받기 (ZIP)</button>
+  <small id="expInfo"></small>
+  <small id="expStatus" style="color:var(--acc);margin-top:4px"></small>
+
+  <h2>단축키</h2>
+  <small><kbd>Del</kbd> 삭제 · <kbd>방향키</kbd> 0.5mm 이동(<kbd>Shift</kbd> 2mm) · <kbd>휠</kbd> 크기 · 회전 중 <kbd>Shift</kbd> 15° · 이동 중 <kbd>Alt</kbd> 스냅 끔 · <kbd>PgUp</kbd>/<kbd>PgDn</kbd> 이전/다음 카드</small>
+</aside>
+
+<section id="center">
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="drop">이미지를 여기에 놓으세요</div>
+    <div id="hint"></div>
+  </div>
+  <div id="strip">
+    <div id="stripCtl">
+      <div id="cardPos"></div>
+      <div class="row"><button id="cAdd">+ 카드</button><button id="cDel">삭제</button></div>
+      <div class="row"><button id="cLeft" title="순서를 앞으로">◀ 순서</button><button id="cRight" title="순서를 뒤로">순서 ▶</button></div>
+    </div>
+    <div id="thumbs"></div>
+  </div>
+</section>
+
+<aside id="right">
+  <h2>선택한 이미지</h2>
+  <div id="props"></div>
+  <h2>이 면의 이미지</h2>
+  <div id="layers"></div>
+</aside>
+</main>
+
+<script>
+const $=s=>document.querySelector(s);
+const cv=$('#cv'),ctx=cv.getContext('2d'),stage=$('#stage'),props=$('#props'),layersEl=$('#layers'),thumbsEl=$('#thumbs');
+const SPEC={L:85.5,S:54,bleed:.5,safe:3,radius:3}; // 고정 규격: 재단 85.5×54, 작업 86.5×55, 타공 없음
+const KO={portrait:'세로형',landscape:'가로형'};
+let uidN=0;const uid=()=>'i'+Date.now().toString(36)+(uidN++).toString(36);
+const blank=()=>({layers:[]});
+const newCard=o=>({id:uid(),orient:o,front:blank(),back:blank()});
+let state={cards:[newCard('portrait')],commonBack:false,common:{portrait:blank(),landscape:blank()}};
+const assets={}; // id → {blob,img}
+let ci=0,side='front',selId=null,showGuides=true,preview=false,drag=null,snapV=false,snapH=false,hist=[],hi=-1,stripSig='',busy=false;
+const rad=d=>d*Math.PI/180;
+const dims=o=>o==='landscape'?{W:SPEC.L,H:SPEC.S}:{W:SPEC.S,H:SPEC.L};
+const card=()=>state.cards[ci];
+const D=()=>dims(card().orient);
+const sideOf=(c,s)=>s==='back'&&state.commonBack?state.common[c.orient]:c[s];
+const cur=()=>sideOf(card(),side);
+const sel=()=>cur().layers.find(l=>l.id===selId)||null;
+const sigNow=()=>state.cards.map(c=>c.id+c.orient).join('|');
+
+/* ---------- 히스토리 ---------- */
+function commit(){hist=hist.slice(0,hi+1);hist.push(JSON.stringify({state,ci}));if(hist.length>60)hist.shift();hi=hist.length-1;histBtns();thumbCur()}
+function restore(){const s=JSON.parse(hist[hi]);state=s.state;ci=Math.min(s.ci,state.cards.length-1);stripSig='';refresh();histBtns()}
+function undo(){if(hi>0){hi--;restore()}}
+function redo(){if(hi<hist.length-1){hi++;restore()}}
+function histBtns(){$('#undo').disabled=hi<=0;$('#redo').disabled=hi>=hist.length-1}
+
+/* ---------- 그리기 ---------- */
+function drawLayer(c,l){const a=assets[l.asset];if(!a||!a.img.complete||!a.img.naturalWidth)return;
+  c.save();c.translate(l.x,l.y);c.rotate(rad(l.rot));c.scale(l.scale*(l.flipX?-1:1),l.scale);
+  c.filter=l.gray?'grayscale(1)':'none';c.drawImage(a.img,-l.w/2,-l.h/2,l.w,l.h);c.restore()}
+function drawCard(c,k,ox,oy,sd,clip,W,H){const b=SPEC.bleed;
+  c.save();c.translate(ox,oy);c.scale(k,k);c.beginPath();
+  if(clip==='trim')c.roundRect(0,0,W,H,SPEC.radius);else c.rect(-b,-b,W+2*b,H+2*b);
+  c.clip();c.fillStyle='#ffffff';c.fillRect(-b,-b,W+2*b,H+2*b);
+  for(const l of sd.layers)if(!l.hidden)drawLayer(c,l);
+  c.restore()}
+function view(){const r=stage.getBoundingClientRect(),b=SPEC.bleed,{W,H}=D();
+  const k=Math.max(.5,Math.min((r.width-90)/(W+2*b),(r.height-100)/(H+2*b)));
+  return{k,ox:(r.width-W*k)/2,oy:(r.height-H*k)/2-6,cw:r.width,ch:r.height}}
+function corners(l){const c=Math.cos(rad(l.rot)),s=Math.sin(rad(l.rot)),hw=l.w*l.scale/2,hh=l.h*l.scale/2;
+  return[[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(([x,y])=>({x:l.x+x*c-y*s,y:l.y+x*s+y*c}))}
+function handles(l,v){const cs=corners(l).map(p=>({x:v.ox+p.x*v.k,y:v.oy+p.y*v.k}));
+  const tm={x:(cs[0].x+cs[1].x)/2,y:(cs[0].y+cs[1].y)/2},a=rad(l.rot);
+  return{cs,tm,rot:{x:tm.x+Math.sin(a)*26,y:tm.y-Math.cos(a)*26}}}
+function render(){
+  const v=view(),dpr=window.devicePixelRatio||1,pw=Math.round(v.cw*dpr),ph=Math.round(v.ch*dpr);
+  if(cv.width!==pw||cv.height!==ph){cv.width=pw;cv.height=ph;cv.style.width=v.cw+'px';cv.style.height=v.ch+'px'}
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,v.cw,v.ch);
+  const {W,H}=D(),b=SPEC.bleed,s=SPEC.safe,R=SPEC.radius,k=v.k;
+  ctx.save();ctx.shadowColor='rgba(0,0,0,.55)';ctx.shadowBlur=28;ctx.shadowOffsetY=8;ctx.fillStyle='#fff';ctx.beginPath();
+  if(preview)ctx.roundRect(v.ox,v.oy,W*k,H*k,R*k);else ctx.rect(v.ox-b*k,v.oy-b*k,(W+2*b)*k,(H+2*b)*k);
+  ctx.fill();ctx.restore();
+  drawCard(ctx,k,v.ox,v.oy,cur(),preview?'trim':'bleed',W,H);
+  if(preview)return;
+  if(!cur().layers.length){ctx.fillStyle='#b5b8c2';ctx.font='13px "Noto Sans KR","Malgun Gothic",sans-serif';ctx.textAlign='center';
+    ctx.fillText('이미지를 끌어다 놓거나',v.ox+W*k/2,v.oy+H*k/2-8);ctx.fillText('왼쪽에서 넣어 주세요',v.ox+W*k/2,v.oy+H*k/2+12)}
+  if(showGuides){ctx.save();
+    ctx.beginPath();ctx.rect(v.ox-b*k,v.oy-b*k,(W+2*b)*k,(H+2*b)*k);ctx.roundRect(v.ox,v.oy,W*k,H*k,R*k);ctx.fillStyle='rgba(255,45,120,.16)';ctx.fill('evenodd');
+    ctx.lineWidth=1.25;ctx.strokeStyle='#ff2d78';ctx.beginPath();ctx.roundRect(v.ox,v.oy,W*k,H*k,R*k);ctx.stroke();
+    ctx.setLineDash([5,4]);ctx.strokeStyle='#19b8ff';ctx.beginPath();ctx.roundRect(v.ox+s*k,v.oy+s*k,(W-2*s)*k,(H-2*s)*k,Math.max(0,R-s)*k);ctx.stroke();
+    ctx.restore()}
+  ctx.save();ctx.strokeStyle='#ffd400';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+  if(snapV){ctx.beginPath();ctx.moveTo(v.ox+W*k/2,v.oy-b*k-12);ctx.lineTo(v.ox+W*k/2,v.oy+(H+b)*k+12);ctx.stroke()}
+  if(snapH){ctx.beginPath();ctx.moveTo(v.ox-b*k-12,v.oy+H*k/2);ctx.lineTo(v.ox+(W+b)*k+12,v.oy+H*k/2);ctx.stroke()}
+  ctx.restore();
+  const l=sel();
+  if(l){const h=handles(l,v);ctx.save();ctx.strokeStyle='#ff4d8d';ctx.lineWidth=1.5;ctx.beginPath();
+    h.cs.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(h.tm.x,h.tm.y);ctx.lineTo(h.rot.x,h.rot.y);ctx.stroke();
+    ctx.fillStyle='#fff';
+    for(const p of h.cs){ctx.beginPath();ctx.rect(p.x-5,p.y-5,10,10);ctx.fill();ctx.stroke()}
+    ctx.beginPath();ctx.arc(h.rot.x,h.rot.y,6,0,7);ctx.fill();ctx.stroke();ctx.restore()}
+}
+
+/* ---------- 이미지·레이어 ---------- */
+function fit(l,mode,dm){const {W,H}=dm||D(),b=SPEC.bleed;
+  l.scale=mode==='cover'?Math.max((W+2*b)/l.w,(H+2*b)/l.h):Math.min(W/l.w,H/l.h);l.x=W/2;l.y=H/2;l.rot=0}
+function addImage(blob){return new Promise(res=>{const url=URL.createObjectURL(blob),img=new Image();
+  img.onload=()=>{const id=uid();assets[id]={blob,img};
+    const l={id:uid(),asset:id,x:0,y:0,w:img.naturalWidth/300*25.4,h:img.naturalHeight/300*25.4,scale:1,rot:0,flipX:false,hidden:false,gray:false};
+    fit(l,'cover');cur().layers.push(l);selId=l.id;res(true)};
+  img.onerror=()=>{URL.revokeObjectURL(url);res(false)};img.src=url})}
+const onlyImages=files=>files.filter(f=>f.type.startsWith('image/'));
+async function addToCard(files){let bad=0;for(const f of onlyImages(files))if(!await addImage(f))bad++;
+  commit();refresh();if(bad)alert(`읽을 수 없는 이미지 ${bad}개는 제외했습니다.`)}
+async function addAsCards(files){const imgs=onlyImages(files);if(!imgs.length)return;
+  const o=card().orient;let bad=0,useCur=!card().front.layers.length,made=false;side='front';
+  for(const f of imgs){
+    if(!useCur){state.cards.push(newCard(o));ci=state.cards.length-1;made=true}
+    if(await addImage(f)){useCur=false;made=false}else{bad++;useCur=true}}
+  if(useCur&&made){state.cards.pop();ci=state.cards.length-1} // 읽기 실패로 비어 있는 새 카드는 버린다
+  selId=null;commit();refresh();if(bad)alert(`읽을 수 없는 이미지 ${bad}개는 제외했습니다.`)}
+function removeSel(){const a=cur().layers,i=a.findIndex(l=>l.id===selId);if(i<0)return;a.splice(i,1);selId=null;commit();refresh()}
+function moveZ(id,d){const a=cur().layers,i=a.findIndex(l=>l.id===id),j=i+d;if(i<0||j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];commit();refresh()}
+
+/* ---------- 카드(여러 장) ---------- */
+function selectCard(i){if(i<0||i>=state.cards.length||i===ci)return;ci=i;selId=null;refresh()}
+function addCard(){state.cards.splice(ci+1,0,newCard(card().orient));ci++;side='front';selId=null;commit();refresh()}
+function delCard(){if(state.cards.length===1)state.cards[0]=newCard(card().orient);else{state.cards.splice(ci,1);ci=Math.min(ci,state.cards.length-1)}selId=null;commit();refresh()}
+function moveCard(d){const j=ci+d,a=state.cards;if(j<0||j>=a.length)return;[a[ci],a[j]]=[a[j],a[ci]];ci=j;commit();refresh()}
+function reorient(c,o){if(c.orient===o)return;const od=dims(c.orient),nd=dims(o),b=SPEC.bleed,e=.05;
+  for(const s of[c.front,c.back])for(const l of s.layers){const hw=l.w*l.scale/2,hh=l.h*l.scale/2; // 꽉 채우던 이미지는 전환 후에도 꽉 채운다
+    const full=l.rot===0&&l.x-hw<=-b+e&&l.x+hw>=od.W+b-e&&l.y-hh<=-b+e&&l.y+hh>=od.H+b-e;
+    if(full)fit(l,'cover',nd);else{l.x=l.x/od.W*nd.W;l.y=l.y/od.H*nd.H}}
+  c.orient=o}
+function drawThumb(el,c){const {W,H}=dims(c.orient),k=70/SPEC.L,dpr=2;
+  el.width=Math.round(W*k*dpr);el.height=Math.round(H*k*dpr);el.style.width=W*k+'px';el.style.height=H*k+'px';
+  drawCard(el.getContext('2d'),k*dpr,0,0,c.front,'trim',W,H)}
+function thumbCur(){const el=thumbsEl.children[ci];if(el&&stripSig===sigNow())drawThumb(el.firstChild,card())}
+function syncStrip(){const sig=sigNow();
+  if(sig!==stripSig){stripSig=sig;
+    thumbsEl.innerHTML=state.cards.map((c,i)=>`<div class="thumb" data-i="${i}"><canvas></canvas><span>${i+1}</span></div>`).join('');
+    state.cards.forEach((c,i)=>drawThumb(thumbsEl.children[i].firstChild,c))}
+  else thumbCur();
+  [...thumbsEl.children].forEach((el,i)=>el.classList.toggle('sel',i===ci));
+  const el=thumbsEl.children[ci];if(el)el.scrollIntoView({block:'nearest',inline:'nearest'});
+  $('#cardPos').textContent=`카드 ${ci+1} / 총 ${state.cards.length}장`;$('#cLeft').disabled=ci===0;$('#cRight').disabled=ci===state.cards.length-1}
+
+/* ---------- UI ---------- */
+const num=(v,m=1)=>Math.round(v*m*100)/100;
+function F(label,k,o={}){return `<label class="f">${label}<input type="number" data-k="${k}" data-m="${o.m||1}" ${o.min!=null?`min="${o.min}"`:''} step="${o.step||1}"></label>`}
+function buildProps(){
+  if(!sel()){props.innerHTML='<div class="empty">카드 위의 이미지를 클릭하면 여기서 편집할 수 있습니다.</div>';return}
+  props.innerHTML=`<div class="dpi" id="dpiInfo"></div>
+  <div class="row"><button data-act="cover">카드 채우기</button><button data-act="contain">전체 보이기</button></div>
+  <div class="row">${F('X(mm)','x',{step:.5})}${F('Y(mm)','y',{step:.5})}</div>
+  <div class="row">${F('크기(%)','scale',{m:100,min:1})}${F('회전(°)','rot')}</div>
+  <div class="row"><label class="c"><input type="checkbox" data-k="gray">흑백</label></div>
+  <div class="row"><button data-act="cH">가로 중앙</button><button data-act="cV">세로 중앙</button><button data-act="flip">좌우 반전</button></div>
+  <div class="row"><button data-act="up">앞으로</button><button data-act="down">뒤로</button><button data-act="del">삭제</button></div>`;
+  syncProps()}
+function syncProps(skip){const l=sel();if(!l)return;
+  props.querySelectorAll('[data-k]').forEach(el=>{if(el===skip)return;const k=el.dataset.k;
+    if(el.type==='checkbox')el.checked=!!l[k];else if(el!==document.activeElement)el.value=num(l[k],+el.dataset.m||1)});
+  const d=$('#dpiInfo');
+  if(d){const dpi=Math.round(300/l.scale);d.className='dpi'+(dpi<200?' bad':dpi<280?' warn':'');
+    d.textContent=`유효 해상도 ${dpi} dpi`+(dpi<200?' — 인쇄 시 흐릿합니다':dpi<280?' — 다소 낮음(권장 300 이상)':' — 인쇄 적합')}}
+function buildLayers(){const a=cur().layers;
+  if(!a.length){layersEl.innerHTML='<div class="empty">이미지가 없습니다.</div>';return}
+  layersEl.innerHTML=[...a].reverse().map((l,i)=>`<div class="layer${l.id===selId?' sel':''}${l.hidden?' hid':''}" data-id="${l.id}"><span class="nm">🖼 이미지 ${a.length-i}</span>
+    <button data-la="vis" title="표시/숨김">${l.hidden?'○':'●'}</button><button data-la="up" title="앞으로">▲</button><button data-la="down" title="뒤로">▼</button><button data-la="del" title="삭제">✕</button></div>`).join('')}
+function syncCard(){
+  const {W,H}=D(),b=SPEC.bleed,fw=W+2*b,fh=H+2*b,dpi=+$('#dpi').value,px=mm=>Math.round(mm/25.4*dpi);
+  document.querySelectorAll('#orientSeg button').forEach(x=>x.classList.toggle('on',x.dataset.o===card().orient));
+  $('#spec').innerHTML=`재단 사이즈 <b>${W}×${H}mm</b><br>작업 사이즈 <b>${fw}×${fh}mm</b> (사방 ${b}mm)<br>모서리 R${SPEC.radius}mm · 안전선 ${SPEC.safe}mm · 타공 없음`;
+  document.querySelectorAll('#sideSeg button').forEach(x=>{x.classList.toggle('on',x.dataset.side===side);if(x.dataset.side==='back')x.textContent=state.commonBack?'뒷면(공통)':'뒷면'});
+  $('#commonBack').checked=state.commonBack;
+  $('#tgGuide').classList.toggle('on',showGuides);$('#tgPrev').classList.toggle('on',preview);
+  $('#expInfo').textContent=`EPS 1개 = ${fw}×${fh}mm 실제 크기, ${px(fw)}×${px(fh)}px RGB 이미지. 빈 면은 제외됩니다.`;
+  $('#hint').innerHTML=preview?'재단 후 완성 모습입니다':`<i class="c1">━ 재단선</i><i class="c2">┅ 안전선 (중요 요소는 안쪽에)</i><i>분홍 영역 = 잘려 나가는 여유</i>`}
+function refresh(){if(selId&&!sel())selId=null;syncCard();buildProps();buildLayers();syncStrip();render()}
+
+props.addEventListener('input',e=>{const t=e.target,l=sel(),k=t.dataset.k;if(!l||!k)return;let v;
+  if(t.type==='checkbox')v=t.checked;else{v=parseFloat(t.value);if(isNaN(v))return;v/=(+t.dataset.m||1);if(k==='scale')v=Math.max(.01,v)}
+  l[k]=v;syncProps(t);render()});
+props.addEventListener('change',e=>{if(e.target.dataset.k)commit()});
+props.addEventListener('click',e=>{const a=e.target.dataset.act,l=sel();if(!a||!l)return;
+  if(a==='del')return removeSel();if(a==='up')return moveZ(l.id,1);if(a==='down')return moveZ(l.id,-1);
+  if(a==='cover'||a==='contain')fit(l,a);else if(a==='cH')l.x=D().W/2;else if(a==='cV')l.y=D().H/2;else if(a==='flip')l.flipX=!l.flipX;
+  commit();syncProps();render()});
+layersEl.addEventListener('click',e=>{const row=e.target.closest('.layer');if(!row)return;const id=row.dataset.id,la=e.target.dataset.la;
+  if(la==='vis'){const l=cur().layers.find(x=>x.id===id);l.hidden=!l.hidden;commit();refresh()}
+  else if(la==='up')moveZ(id,1);else if(la==='down')moveZ(id,-1);
+  else if(la==='del'){selId=id;removeSel()}else{selId=id;refresh()}});
+thumbsEl.addEventListener('click',e=>{const t=e.target.closest('.thumb');if(t)selectCard(+t.dataset.i)});
+
+/* ---------- 캔버스 포인터 ---------- */
+function evPt(e){const r=cv.getBoundingClientRect(),v=view(),sx=e.clientX-r.left,sy=e.clientY-r.top;return{sx,sy,x:(sx-v.ox)/v.k,y:(sy-v.oy)/v.k,v}}
+function hitTest(p){const a=cur().layers;for(let i=a.length-1;i>=0;i--){const l=a[i];if(l.hidden)continue;
+  const dx=p.x-l.x,dy=p.y-l.y,c=Math.cos(rad(-l.rot)),s=Math.sin(rad(-l.rot)),lx=(dx*c-dy*s)/l.scale,ly=(dx*s+dy*c)/l.scale;
+  if(Math.abs(lx)<=l.w/2&&Math.abs(ly)<=l.h/2)return l}return null}
+function hitHandle(l,p){const h=handles(l,p.v),near=(q,r)=>Math.hypot(q.x-p.sx,q.y-p.sy)<=r;
+  if(near(h.rot,11))return'rot';if(h.cs.some(q=>near(q,11)))return'scale';return null}
+cv.addEventListener('pointerdown',e=>{
+  if(preview||busy||e.button!==0)return;const p=evPt(e);let l=sel(),mode=l?hitHandle(l,p):null;
+  if(!mode){const hit=hitTest(p);if((hit?hit.id:null)!==selId){selId=hit?hit.id:null;refresh()}l=hit;if(l)mode='move'}
+  if(!mode)return;
+  drag={mode,px:p.x,py:p.y,x:l.x,y:l.y,scale:l.scale,rot:l.rot,d0:Math.hypot(p.x-l.x,p.y-l.y)||1,a0:Math.atan2(p.y-l.y,p.x-l.x),moved:false};
+  cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointermove',e=>{
+  const p=evPt(e);
+  if(!drag){if(preview)return;const l=sel(),h=l?hitHandle(l,p):null;cv.style.cursor=h==='rot'?'grab':h==='scale'?'nwse-resize':hitTest(p)?'move':'default';return}
+  const l=sel();if(!l)return;drag.moved=true;const {W,H}=D();
+  if(drag.mode==='move'){l.x=drag.x+p.x-drag.px;l.y=drag.y+p.y-drag.py;snapV=snapH=false;
+    if(!e.altKey){const t=6/p.v.k;if(Math.abs(l.x-W/2)<t){l.x=W/2;snapV=true}if(Math.abs(l.y-H/2)<t){l.y=H/2;snapH=true}}}
+  else if(drag.mode==='scale')l.scale=Math.max(.01,drag.scale*Math.hypot(p.x-l.x,p.y-l.y)/drag.d0);
+  else{let r=drag.rot+(Math.atan2(p.y-l.y,p.x-l.x)-drag.a0)*180/Math.PI;r=((r+180)%360+360)%360-180;
+    if(e.shiftKey)r=Math.round(r/15)*15;else if(Math.abs(r)<2)r=0;l.rot=Math.round(r*10)/10}
+  syncProps();render()});
+function endDrag(){if(!drag)return;const m=drag.moved;drag=null;snapV=snapH=false;if(m)commit();render()}
+cv.addEventListener('pointerup',endDrag);cv.addEventListener('pointercancel',endDrag);
+let lazyT;const lazyCommit=()=>{clearTimeout(lazyT);lazyT=setTimeout(commit,400)};
+cv.addEventListener('wheel',e=>{const l=sel();if(!l||preview)return;e.preventDefault();
+  l.scale=Math.max(.01,l.scale*(e.deltaY<0?1.04:1/1.04));syncProps();render();lazyCommit()},{passive:false});
+
+/* ---------- 키보드·붙여넣기·드롭 ---------- */
+addEventListener('keydown',e=>{
+  const t=e.target,typing=t.tagName==='INPUT'&&t.type==='number'||t.tagName==='SELECT';
+  const mod=e.ctrlKey||e.metaKey,key=e.key.toLowerCase();
+  if(typing||busy)return;
+  if(mod&&key==='z'){e.preventDefault();e.shiftKey?redo():undo();return}
+  if(mod&&key==='y'){e.preventDefault();redo();return}
+  if(key==='pageup'){e.preventDefault();selectCard(ci-1);return}
+  if(key==='pagedown'){e.preventDefault();selectCard(ci+1);return}
+  if(key==='escape'){selId=null;refresh();return}
+  const l=sel();if(!l)return;
+  if(key==='delete'||key==='backspace'){e.preventDefault();removeSel();return}
+  const d=e.shiftKey?2:.5,mv={arrowleft:[-d,0],arrowright:[d,0],arrowup:[0,-d],arrowdown:[0,d]}[key];
+  if(mv){e.preventDefault();l.x+=mv[0];l.y+=mv[1];syncProps();render();lazyCommit()}});
+addEventListener('paste',e=>{const fs=onlyImages([...(e.clipboardData?.files||[])]);if(fs.length){e.preventDefault();addImages(fs)}});
+stage.addEventListener('dragover',e=>{e.preventDefault();stage.classList.add('over')});
+stage.addEventListener('dragleave',()=>stage.classList.remove('over'));
+stage.addEventListener('drop',e=>{e.preventDefault();stage.classList.remove('over');const fs=onlyImages([...e.dataTransfer.files]);
+  if(fs.length)addImages(fs)});
+
+/* ---------- 버튼 ---------- */
+const addImages=files=>side==='back'?addToCard(files):addAsCards(files); // 앞면: 1장=카드 1장, 뒷면: 보고 있는 뒷면에 넣기
+$('#addCards').onclick=()=>$('#fileCards').click();
+$('#fileCards').onchange=e=>{addImages([...e.target.files]);e.target.value=''};
+document.querySelectorAll('#orientSeg button').forEach(b=>b.onclick=()=>{if(b.dataset.o===card().orient)return;reorient(card(),b.dataset.o);commit();refresh()});
+$('#orientAll').onclick=()=>{const o=card().orient;state.cards.forEach(c=>reorient(c,o));commit();refresh()};
+$('#commonBack').onchange=e=>{state.commonBack=e.target.checked;const c=card();
+  if(state.commonBack&&!state.common[c.orient].layers.length&&c.back.layers.length)state.common[c.orient]=JSON.parse(JSON.stringify(c.back));
+  selId=null;commit();refresh()};
+$('#dpi').onchange=syncCard;
+document.querySelectorAll('#sideSeg button').forEach(b=>b.onclick=()=>{side=b.dataset.side;selId=null;refresh()});
+$('#undo').onclick=undo;$('#redo').onclick=redo;
+$('#tgGuide').onclick=()=>{showGuides=!showGuides;refresh()};
+$('#tgPrev').onclick=()=>{preview=!preview;refresh()};
+$('#cAdd').onclick=addCard;$('#cDel').onclick=delCard;$('#cLeft').onclick=()=>moveCard(-1);$('#cRight').onclick=()=>moveCard(1);
+
+/* ---------- 내보내기 ---------- */
+/*EPS-BEGIN*/
+const crcT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(u){let c=0xFFFFFFFF;for(let i=0;i<u.length;i++)c=crcT[(c^u[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0}
+function ascii85(src){
+  const n=src.length,g=Math.ceil(n/4)*5,out=new Uint8Array(g+Math.ceil(g/80)+8);let o=0,col=0,i=0;
+  const put=c=>{out[o++]=c;if(++col===80){out[o++]=10;col=0}};
+  for(;i+4<=n;i+=4){let v=((src[i]<<24)|(src[i+1]<<16)|(src[i+2]<<8)|src[i+3])>>>0;
+    if(v===0){put(122);continue}
+    const c4=v%85;v=(v-c4)/85;const c3=v%85;v=(v-c3)/85;const c2=v%85;v=(v-c2)/85;const c1=v%85,c0=(v-c1)/85;
+    put(c0+33);put(c1+33);put(c2+33);put(c3+33);put(c4+33)}
+  const r=n-i;
+  if(r){let v=0;for(let j=0;j<4;j++)v=v*256+(j<r?src[i+j]:0);const c=[];for(let j=4;j>=0;j--){c[j]=v%85;v=Math.floor(v/85)}for(let j=0;j<=r;j++)put(c[j]+33)}
+  out[o++]=126;out[o++]=62;out[o++]=10;return out.subarray(0,o)}
+// RGBA 픽셀 → 일러스트레이터에서 열리는 EPS(레벨2, 실제 mm 크기, RGB 이미지 1장)
+function buildEps(rgba,w,h,wmm,hmm,title){
+  const rgb=new Uint8Array(w*h*3);for(let i=0,j=0;i<rgba.length;i+=4){rgb[j++]=rgba[i];rgb[j++]=rgba[i+1];rgb[j++]=rgba[i+2]}
+  const pw=wmm/25.4*72,ph=hmm/25.4*72,f=v=>v.toFixed(4);
+  const head=['%!PS-Adobe-3.0 EPSF-3.0','%%Creator: Photocard Editor','%%Title: '+title,
+    `%%BoundingBox: 0 0 ${Math.ceil(pw)} ${Math.ceil(ph)}`,`%%HiResBoundingBox: 0.0000 0.0000 ${f(pw)} ${f(ph)}`,
+    '%%LanguageLevel: 2','%%DocumentData: Clean7Bit','%%Pages: 1','%%EndComments','%%Page: 1 1','gsave',
+    `${f(pw)} ${f(ph)} scale`,'/DeviceRGB setcolorspace',
+    `<< /ImageType 1 /Width ${w} /Height ${h} /BitsPerComponent 8 /Decode [0 1 0 1 0 1]`,
+    `/ImageMatrix [${w} 0 0 -${h} 0 ${h}] /DataSource currentfile /ASCII85Decode filter >> image`].join('\n')+'\n';
+  const te=new TextEncoder(),a=te.encode(head),b=ascii85(rgb),c=te.encode('grestore\nshowpage\n%%Trailer\n%%EOF\n');
+  const out=new Uint8Array(a.length+b.length+c.length);out.set(a);out.set(b,a.length);out.set(c,a.length+b.length);return out}
+// 무압축 ZIP (파일명 UTF-8)
+function zipStore(files){
+  const te=new TextEncoder(),parts=[],cen=[],now=new Date();let off=0;
+  const dt=((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate(),tm=(now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1);
+  for(const f of files){const nm=te.encode(f.name),crc=crc32(f.data),n=f.data.length;
+    const lh=new Uint8Array(30+nm.length),v=new DataView(lh.buffer);
+    v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint16(6,0x0800,true);v.setUint16(10,tm,true);v.setUint16(12,dt,true);
+    v.setUint32(14,crc,true);v.setUint32(18,n,true);v.setUint32(22,n,true);v.setUint16(26,nm.length,true);lh.set(nm,30);
+    const ch=new Uint8Array(46+nm.length),c=new DataView(ch.buffer);
+    c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint16(12,tm,true);c.setUint16(14,dt,true);
+    c.setUint32(16,crc,true);c.setUint32(20,n,true);c.setUint32(24,n,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);ch.set(nm,46);
+    parts.push(lh,f.data);cen.push(ch);off+=lh.length+n}
+  const cs=cen.reduce((a,x)=>a+x.length,0),e=new Uint8Array(22),ev=new DataView(e.buffer);
+  ev.setUint32(0,0x06054b50,true);ev.setUint16(8,files.length,true);ev.setUint16(10,files.length,true);ev.setUint32(12,cs,true);ev.setUint32(16,off,true);
+  return new Blob([...parts,...cen,e],{type:'application/zip'})}
+/*EPS-END*/
+function renderSide(sd,o,dpi,mode){const {W,H}=dims(o),k=dpi/25.4,b=mode==='print'?SPEC.bleed:0,c=document.createElement('canvas');
+  c.width=Math.round((W+2*b)*k);c.height=Math.round((H+2*b)*k);
+  drawCard(c.getContext('2d'),k,b*k,b*k,sd,mode==='print'?'bleed':'trim',W,H);return c}
+function epsOf(sd,o,dpi,title){const c=renderSide(sd,o,dpi,'print'),{W,H}=dims(o),b=SPEC.bleed;
+  return buildEps(c.getContext('2d').getImageData(0,0,c.width,c.height).data,c.width,c.height,W+2*b,H+2*b,title)}
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),10000)}
+const status=t=>{$('#expStatus').textContent=t};
+const pad=i=>String(i+1).padStart(Math.max(2,String(state.cards.length).length),'0');
+function exportJobs(){const jobs=[];
+  state.cards.forEach((c,i)=>{
+    if(c.front.layers.length)jobs.push({name:`${pad(i)}_앞면_${KO[c.orient]}.eps`,sd:c.front,o:c.orient});
+    if(!state.commonBack&&c.back.layers.length)jobs.push({name:`${pad(i)}_뒷면_${KO[c.orient]}.eps`,sd:c.back,o:c.orient})});
+  if(state.commonBack)for(const o of['portrait','landscape'])
+    if(state.common[o].layers.length&&state.cards.some(c=>c.orient===o))jobs.push({name:`공통_뒷면_${KO[o]}.eps`,sd:state.common[o],o});
+  return jobs}
+async function exportAll(){
+  if(busy)return;const dpi=+$('#dpi').value,jobs=exportJobs();
+  if(!jobs.length)return alert('내보낼 내용이 없습니다. 카드에 이미지를 먼저 넣어 주세요.');
+  const est=jobs.length*(86.5/25.4*dpi)*(55/25.4*dpi)*3*1.27;
+  if(est>3.8e9)return alert('한 번에 받기에는 용량이 너무 큽니다(4GB 초과). 300dpi로 낮추거나 카드를 나누어 내보내 주세요.');
+  busy=true;const files=[];
+  try{for(let i=0;i<jobs.length;i++){status(`EPS 만드는 중… ${i+1} / ${jobs.length}`);await new Promise(r=>setTimeout(r,0));
+      files.push({name:jobs[i].name,data:epsOf(jobs[i].sd,jobs[i].o,dpi,'photocard '+(i+1))})}
+    status('ZIP으로 묶는 중…');await new Promise(r=>setTimeout(r,0));
+    download(zipStore(files),`포토카드_${state.cards.length}장_${dpi}dpi.zip`);status(`완료: EPS ${files.length}개를 ZIP으로 저장했습니다.`)}
+  catch(err){status('');alert('내보내기 실패: '+err.message)}
+  finally{busy=false}}
+$('#expAll').onclick=exportAll;
+
+/* ---------- 시작 ---------- */
+new ResizeObserver(render).observe(stage);
+commit();refresh();
+</script>
+</body>
+</html>
