@@ -3,9 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>낭만인쇄소 포토카드 에디터</title>
+<title>포토카드 에디터</title>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem('pc_theme')||'light'}catch(e){document.documentElement.dataset.theme='light'}</script>
 <style>
-:root{--bg:#15161a;--panel:#1e2026;--line:#30333c;--fg:#e8e9ee;--mut:#9a9eab;--acc:#ff4d8d;--acc2:#3ec5ff;--in:#282b33}
+/* 블랙 모드(기본 변수) */
+:root{color-scheme:dark;--bg:#15161a;--panel:#1e2026;--line:#30333c;--fg:#e8e9ee;--mut:#9a9eab;--acc:#ff4d8d;--acc2:#3ec5ff;--in:#282b33;
+  --stage1:#2a2c35;--stage2:#15161a;--hovb:#555a68;--hov:#30343e;--selbg:#3a2530;
+  --okbg:#1d3327;--okfg:#7be0a4;--warnbg:#3b2a1a;--warnfg:#ffb866;--badbg:#3d1f24;--badfg:#ff8a8a;--pvbg:rgba(12,13,16,.97)}
+/* 화이트 모드: 밝은 베이지 배경 */
+:root[data-theme=light]{color-scheme:light;--bg:#f3ecdf;--panel:#fbf7ef;--line:#ddd1bc;--fg:#2b2622;--mut:#7c7265;--in:#ffffff;
+  --stage1:#f8f3e9;--stage2:#eadfcb;--hovb:#c2b49b;--hov:#f4ede0;--selbg:#ffe3ec;
+  --okbg:#dff3e6;--okfg:#1c7a44;--warnbg:#fdebd0;--warnfg:#9a5700;--badbg:#fde0e0;--badfg:#b02a2a;--pvbg:rgba(243,236,223,.98)}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--fg);font:13px/1.45 "Noto Sans KR","Malgun Gothic",sans-serif;display:flex;flex-direction:column;overflow:hidden}
@@ -18,7 +26,7 @@ aside{width:270px;flex:none;background:var(--panel);overflow-y:auto;padding:12px
 #left{border-right:1px solid var(--line)}
 #right{border-left:1px solid var(--line);width:280px}
 #center{flex:1;display:flex;flex-direction:column;min-width:0}
-#stage{flex:1;min-height:0;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 40%,#2a2c35,#15161a 75%)}
+#stage{flex:1;min-height:0;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 40%,var(--stage1),var(--stage2) 75%)}
 #cv{position:absolute;left:0;top:0;touch-action:none}
 #hint{position:absolute;left:0;right:0;bottom:8px;text-align:center;color:var(--mut);font-size:12px;pointer-events:none}
 #hint i{font-style:normal;display:inline-block;margin:0 8px}
@@ -31,14 +39,15 @@ aside{width:270px;flex:none;background:var(--panel);overflow-y:auto;padding:12px
 #thumbs{flex:1;display:flex;gap:6px;align-items:center;overflow-x:auto;overflow-y:hidden;padding:6px 10px}
 .thumb{flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 6px;border:2px solid transparent;border-radius:8px;cursor:pointer}
 .thumb:hover{background:var(--in)}
-.thumb.sel{border-color:var(--acc);background:#3a2530}
+.thumb.sel{border-color:var(--acc);background:var(--selbg)}
 .thumb canvas{background:#fff;border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.5);display:block}
 .thumb span{font-size:11px;color:var(--mut)}
 h2{font-size:11px;letter-spacing:.08em;color:var(--mut);margin:16px 0 8px;font-weight:700}
 h2:first-child{margin-top:0}
 button,select,input{font:inherit;color:inherit}
 button{background:var(--in);border:1px solid var(--line);border-radius:7px;padding:6px 10px;cursor:pointer;white-space:nowrap}
-button:hover{border-color:#555a68;background:#30343e}
+button:hover{border-color:var(--hovb);background:var(--hov)}
+button.on:hover,button.pri:hover{background:var(--acc);border-color:var(--acc)}
 button:disabled{opacity:.35;cursor:default}
 button.on{background:var(--acc);border-color:var(--acc);color:#fff}
 button.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
@@ -54,15 +63,15 @@ label.c{display:flex;align-items:center;gap:6px;color:var(--fg);flex:none}
 input[type=number],input[type=text],select{background:var(--in);border:1px solid var(--line);border-radius:6px;padding:5px 7px;width:100%;color:var(--fg)}
 .full{width:100%;margin-bottom:6px}
 .layer{display:flex;align-items:center;gap:4px;padding:5px 6px;border:1px solid var(--line);border-radius:7px;margin-bottom:4px;cursor:pointer;background:var(--in)}
-.layer.sel{border-color:var(--acc);background:#3a2530}
+.layer.sel{border-color:var(--acc);background:var(--selbg)}
 .layer.hid .nm{opacity:.4}
 .layer .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .layer button{padding:1px 6px;font-size:11px;border:none;background:transparent;color:var(--mut)}
 .layer button:hover{color:var(--fg)}
 .empty{color:var(--mut);padding:10px 0;font-size:12px}
-.dpi{font-size:12px;padding:6px 8px;border-radius:6px;background:#1d3327;color:#7be0a4;margin-bottom:8px}
-.dpi.warn{background:#3b2a1a;color:#ffb866}
-.dpi.bad{background:#3d1f24;color:#ff8a8a}
+.dpi{font-size:12px;padding:6px 8px;border-radius:6px;background:var(--okbg);color:var(--okfg);margin-bottom:8px}
+.dpi.warn{background:var(--warnbg);color:var(--warnfg)}
+.dpi.bad{background:var(--badbg);color:var(--badfg)}
 .spec{font-size:12px;line-height:1.7;color:var(--mut);background:var(--in);border:1px solid var(--line);border-radius:7px;padding:7px 9px;margin-bottom:6px}
 .spec b{color:var(--fg);font-weight:700}
 small{color:var(--mut);display:block}
@@ -75,20 +84,20 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 .qty input[type=number]{width:58px;text-align:center}
 #fab{display:none;position:absolute;left:8px;top:8px;z-index:2}
 button{touch-action:manipulation}
-#inapp{background:#3b2a1a;color:#ffb866;padding:8px 12px;font-size:13px;line-height:1.6}
+#inapp{background:var(--warnbg);color:var(--warnfg);padding:8px 12px;font-size:13px;line-height:1.6}
 #inapp button{padding:3px 8px;min-height:0;margin-left:4px}
 #done{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px}
 #done[hidden]{display:none}
 #done .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;width:100%;max-width:360px}
 #doneName{color:var(--mut);font-size:12px;margin:6px 0 12px;word-break:break-all}
-#pv{position:fixed;inset:0;z-index:20;background:rgba(12,13,16,.97);display:flex;flex-direction:column}
+#pv{position:fixed;inset:0;z-index:20;background:var(--pvbg);display:flex;flex-direction:column}
 #pv[hidden]{display:none}
 #pvBar{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
 #pvSum{color:var(--mut);margin-left:6px}
 #pvGrid{flex:1;overflow:auto;display:flex;flex-wrap:wrap;gap:14px;padding:16px;align-content:flex-start;justify-content:center}
 .pvCell{border:1px solid #ff9d2e;border-radius:12px;padding:10px 12px 12px;background:var(--panel)}
 .pvCell h3{font-size:13px;margin:0 0 8px;display:flex;gap:8px;align-items:center}
-.pvCell h3 em{font-style:normal;font-weight:400;color:#ffb866;font-size:11px}
+.pvCell h3 em{font-style:normal;font-weight:400;color:var(--warnfg);font-size:11px}
 .pvSides{display:flex;gap:10px;align-items:flex-start}
 .pvSides figure{margin:0;text-align:center}
 .pvSides canvas{display:block;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.6)}
@@ -125,11 +134,12 @@ button{touch-action:manipulation}
 <div id="inapp" hidden>앱 안의 화면에서는 파일 저장이 안 될 수 있습니다. 크롬이나 사파리에서 열어 주세요.
   <button id="inappBtn" hidden>기본 브라우저로 열기</button> <button id="inappCopy">주소 복사</button></div>
 <header>
-  <h1>낭만인쇄소 <b>포토카드</b> 에디터</h1>
+  <h1><b>포토카드</b> 에디터</h1>
   <div class="seg" id="sideSeg"><button data-side="front" class="on">앞면</button><button data-side="back">뒷면</button></div>
   <button id="undo" title="Ctrl+Z">↶ 실행 취소</button>
   <button id="redo" title="Ctrl+Y">↷ 다시 실행</button>
   <div class="sp"></div>
+  <div class="seg" id="themeSeg" title="작업 화면 색"><button data-t="light">화이트</button><button data-t="dark">블랙</button></div>
   <button id="tgGuide" class="on">가이드선</button>
   <button id="tgPrev" class="pri" title="전체 카드가 재단 후 어떻게 나오는지 보기">전체 미리보기</button>
 </header>
@@ -261,7 +271,7 @@ function render(){
   if(cv.width!==pw||cv.height!==ph){cv.width=pw;cv.height=ph;cv.style.width=v.cw+'px';cv.style.height=v.ch+'px'}
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,v.cw,v.ch);
   const dm=D(),{W,H,FW,FH,bx,by}=dm,R=SPEC.radius,k=v.k;
-  ctx.save();ctx.shadowColor='rgba(0,0,0,.55)';ctx.shadowBlur=28;ctx.shadowOffsetY=8;ctx.fillStyle='#fff';ctx.beginPath();
+  ctx.save();ctx.shadowColor=document.documentElement.dataset.theme==='light'?'rgba(70,50,20,.28)':'rgba(0,0,0,.55)';ctx.shadowBlur=28;ctx.shadowOffsetY=8;ctx.fillStyle='#fff';ctx.beginPath();
   if(preview)ctx.roundRect(v.ox,v.oy,W*k,H*k,R*k);else ctx.rect(v.ox-bx*k,v.oy-by*k,FW*k,FH*k);
   ctx.fill();ctx.restore();
   drawCard(ctx,k,v.ox,v.oy,cur(),preview?'trim':'bleed',dm);
@@ -606,7 +616,7 @@ async function exportAll(){
     status('파일로 묶는 중…');await new Promise(r=>setTimeout(r,0));
     const sum=`${t.kinds}종 · 총 ${t.total}장 (단면 ${t.single}장, 양면 ${t.dbl}장)`,n=new Date(),p2=v=>String(v).padStart(2,'0');
     const header=textImg(`주문자 ${name}  ·  주문번호 ${ono}  ·  ${sum}`,48),base=`포토카드_${name}_${ono}_${t.kinds}종_${t.total}장`;
-    const sheet=['[낭만인쇄소 포토카드 주문 내역]',`주문자명: ${name}`,`주문번호: ${ono}`,`작성일시: ${n.getFullYear()}-${p2(n.getMonth()+1)}-${p2(n.getDate())} ${p2(n.getHours())}:${p2(n.getMinutes())}`,
+    const sheet=['[포토카드 주문 내역]',`주문자명: ${name}`,`주문번호: ${ono}`,`작성일시: ${n.getFullYear()}-${p2(n.getMonth()+1)}-${p2(n.getDate())} ${p2(n.getHours())}:${p2(n.getMinutes())}`,
       `규격: 재단 ${SPEC.L}×${SPEC.S}mm / 대지 ${SPEC.FL}×${SPEC.FS}mm / 모서리 R${SPEC.radius}mm / 타공 없음`,`합계: ${sum}`,`해상도: ${dpi}dpi`,
       '세로형 카드는 대지에 시계 반대 방향으로 90° 돌려 넣었습니다(카드 윗부분이 대지 왼쪽).','','번호 | 방향 | 인쇄 | 수량 | 대지',...rows,''].join('\r\n');
     const files=[{name:base+'.eps',data:buildSheet(cells,header,'photocard','eps')},{name:'주문내역.txt',data:new TextEncoder().encode('﻿'+sheet)}];
@@ -614,6 +624,9 @@ async function exportAll(){
   catch(err){status('');alert('내보내기 실패: '+err.message)}
   finally{busy=false}}
 $('#expAll').onclick=exportAll;
+function setTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('pc_theme',t)}catch{}
+  document.querySelectorAll('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));render()}
+document.querySelectorAll('#themeSeg button').forEach(b=>b.onclick=()=>setTheme(b.dataset.t));
 $('#doneClose').onclick=()=>{$('#done').hidden=true};
 // 카카오톡 등 앱 안의 화면에서는 파일 저장이 막히는 경우가 많다 → 기본 브라우저로 안내
 (()=>{const ua=navigator.userAgent,kakao=/KAKAOTALK/i.test(ua);if(!kakao&&!/NAVER\(inapp|Instagram|FBAN|FBAV|Line\//i.test(ua))return;
@@ -630,6 +643,7 @@ $('#oname').oninput=e=>{try{localStorage.setItem('pc_oname',e.target.value)}catc
 
 /* ---------- 시작 ---------- */
 new ResizeObserver(render).observe(stage);
+setTheme(document.documentElement.dataset.theme==='dark'?'dark':'light');
 commit();refresh();
 </script>
 </body>
