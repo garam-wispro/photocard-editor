@@ -51,7 +51,7 @@ button.pri:hover{filter:brightness(1.1)}
 .row>*{flex:1;min-width:0}
 label.f{display:flex;flex-direction:column;gap:3px;color:var(--mut);font-size:11px}
 label.c{display:flex;align-items:center;gap:6px;color:var(--fg);flex:none}
-input[type=number],select{background:var(--in);border:1px solid var(--line);border-radius:6px;padding:5px 7px;width:100%;color:var(--fg)}
+input[type=number],input[type=text],select{background:var(--in);border:1px solid var(--line);border-radius:6px;padding:5px 7px;width:100%;color:var(--fg)}
 .full{width:100%;margin-bottom:6px}
 .layer{display:flex;align-items:center;gap:4px;padding:5px 6px;border:1px solid var(--line);border-radius:7px;margin-bottom:4px;cursor:pointer;background:var(--in)}
 .layer.sel{border-color:var(--acc);background:#3a2530}
@@ -67,6 +67,37 @@ input[type=number],select{background:var(--in);border:1px solid var(--line);bord
 .spec b{color:var(--fg);font-weight:700}
 small{color:var(--mut);display:block}
 kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:0 4px;font:11px monospace}
+#stripCtl{width:214px}
+#stripCtl .row{margin:0;flex-wrap:nowrap}
+#stripCtl .row button{padding:6px 4px}
+.qty{display:flex;align-items:center;gap:5px;margin-bottom:6px}
+.qty button{padding:4px 10px}
+.qty input[type=number]{width:58px;text-align:center}
+#fab{display:none;position:absolute;left:8px;top:8px;z-index:2}
+/* 휴대폰·좁은 화면: 위에서 아래로 한 줄 배치, 페이지 전체가 스크롤 */
+@media (max-width:820px){
+  html,body{height:auto;min-height:100%}
+  body{overflow:visible;display:block}
+  header{flex-wrap:wrap;gap:6px;padding:6px 8px;position:sticky;top:0;z-index:5}
+  header h1,.sp,.pc{display:none}
+  header button{padding:7px 9px}
+  main{display:flex;flex-direction:column}
+  #center{display:block;order:1;flex:none}
+  #right{order:2}
+  #left{order:3}
+  #stage{height:56vh;min-height:300px}
+  aside,#right{width:auto;border:none;border-top:1px solid var(--line);overflow:visible}
+  #strip{display:block;height:auto}
+  #stripCtl{width:auto;border-right:none;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  #cardPos,.qty{margin:0}
+  #stripCtl .row{flex:1;min-width:190px}
+  #thumbs{height:104px}
+  #fab{display:block}
+  button,select,input[type=number],input[type=text]{min-height:40px}
+  input[type=number],input[type=text],select{font-size:16px}
+  .layer button{min-height:0;padding:6px 9px;font-size:13px}
+  label.c input{width:20px;height:20px;min-height:0}
+}
 </style>
 </head>
 <body>
@@ -95,26 +126,29 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
   <label class="c"><input type="checkbox" id="commonBack">모든 카드가 같은 뒷면 사용</label>
 
   <h2>내보내기</h2>
+  <label class="f" style="margin-bottom:6px">주문자명 (필수)<input type="text" id="oname" maxlength="20" placeholder="주문하신 분 성함" autocomplete="name"></label>
+  <div class="spec" id="total"></div>
   <div class="row"><select id="dpi"><option value="300">300 dpi</option><option value="600">600 dpi</option></select></div>
   <button class="pri full" id="expAll">전체 카드 EPS 받기 (ZIP)</button>
   <small id="expInfo"></small>
   <small id="expStatus" style="color:var(--acc);margin-top:4px"></small>
 
-  <h2>단축키</h2>
-  <small><kbd>Del</kbd> 삭제 · <kbd>방향키</kbd> 0.5mm 이동(<kbd>Shift</kbd> 2mm) · <kbd>휠</kbd> 크기 · 회전 중 <kbd>Shift</kbd> 15° · 이동 중 <kbd>Alt</kbd> 스냅 끔 · <kbd>PgUp</kbd>/<kbd>PgDn</kbd> 이전/다음 카드</small>
+  <h2 class="pc">단축키</h2>
+  <small class="pc"><kbd>Del</kbd> 삭제 · <kbd>방향키</kbd> 0.5mm 이동(<kbd>Shift</kbd> 2mm) · <kbd>휠</kbd> 크기 · 회전 중 <kbd>Shift</kbd> 15° · 이동 중 <kbd>Alt</kbd> 스냅 끔 · <kbd>PgUp</kbd>/<kbd>PgDn</kbd> 이전/다음 카드</small>
 </aside>
 
 <section id="center">
   <div id="stage">
     <canvas id="cv"></canvas>
+    <button id="fab" class="pri">＋ 이미지</button>
     <div id="drop">이미지를 여기에 놓으세요</div>
     <div id="hint"></div>
   </div>
   <div id="strip">
     <div id="stripCtl">
       <div id="cardPos"></div>
-      <div class="row"><button id="cAdd">+ 카드</button><button id="cDel">삭제</button></div>
-      <div class="row"><button id="cLeft" title="순서를 앞으로">◀ 순서</button><button id="cRight" title="순서를 뒤로">순서 ▶</button></div>
+      <div class="qty" title="이 카드를 몇 장 인쇄할지"><span>수량</span><button id="qMinus">−</button><input type="number" id="qty" min="1" max="9999" value="1" inputmode="numeric"><button id="qPlus">＋</button><span>장</span></div>
+      <div class="row"><button id="cAdd">+ 카드</button><button id="cDel">삭제</button><button id="cLeft" title="순서를 앞으로">◀</button><button id="cRight" title="순서를 뒤로">▶</button></div>
     </div>
     <div id="thumbs"></div>
   </div>
@@ -136,7 +170,9 @@ const BL=(SPEC.FL-SPEC.L)/2,BS=(SPEC.FS-SPEC.S)/2; // 재단선 바깥 여유: �
 const KO={portrait:'세로형',landscape:'가로형'};
 let uidN=0;const uid=()=>'i'+Date.now().toString(36)+(uidN++).toString(36);
 const blank=()=>({layers:[]});
-const newCard=o=>({id:uid(),orient:o,front:blank(),back:blank()});
+const newCard=o=>({id:uid(),orient:o,qty:1,front:blank(),back:blank()});
+const qtyOf=c=>Math.min(9999,Math.max(1,Math.floor(+c.qty)||1));
+const COARSE=matchMedia('(pointer:coarse)').matches,HR=COARSE?22:11,HS=COARSE?8:5; // 손가락용으로 조절점을 크게
 let state={cards:[newCard('portrait')],commonBack:false,common:{portrait:blank(),landscape:blank()}};
 const assets={}; // id → {blob,img}
 let ci=0,side='front',selId=null,showGuides=true,preview=false,drag=null,snapV=false,snapH=false,hist=[],hi=-1,stripSig='',busy=false;
@@ -167,7 +203,7 @@ function drawCard(c,k,ox,oy,sd,clip,dm){const {W,H,FW,FH,bx,by}=dm;
   for(const l of sd.layers)if(!l.hidden)drawLayer(c,l);
   c.restore()}
 function view(){const r=stage.getBoundingClientRect(),{W,H,FW,FH}=D();
-  const k=Math.max(.5,Math.min((r.width-90)/FW,(r.height-100)/FH));
+  const k=Math.max(.5,Math.min((r.width-(r.width<500?44:90))/FW,(r.height-(r.width<500?84:100))/FH));
   return{k,ox:(r.width-W*k)/2,oy:(r.height-H*k)/2-6,cw:r.width,ch:r.height}}
 function corners(l){const c=Math.cos(rad(l.rot)),s=Math.sin(rad(l.rot)),hw=l.w*l.scale/2,hh=l.h*l.scale/2;
   return[[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(([x,y])=>({x:l.x+x*c-y*s,y:l.y+x*s+y*c}))}
@@ -199,8 +235,8 @@ function render(){
     h.cs.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();
     ctx.beginPath();ctx.moveTo(h.tm.x,h.tm.y);ctx.lineTo(h.rot.x,h.rot.y);ctx.stroke();
     ctx.fillStyle='#fff';
-    for(const p of h.cs){ctx.beginPath();ctx.rect(p.x-5,p.y-5,10,10);ctx.fill();ctx.stroke()}
-    ctx.beginPath();ctx.arc(h.rot.x,h.rot.y,6,0,7);ctx.fill();ctx.stroke();ctx.restore()}
+    for(const p of h.cs){ctx.beginPath();ctx.rect(p.x-HS,p.y-HS,HS*2,HS*2);ctx.fill();ctx.stroke()}
+    ctx.beginPath();ctx.arc(h.rot.x,h.rot.y,HS+1,0,7);ctx.fill();ctx.stroke();ctx.restore()}
 }
 
 /* ---------- 이미지·레이어 ---------- */
@@ -242,12 +278,14 @@ function drawThumb(el,c){const {W,H}=dims(c.orient),k=70/SPEC.L,dpr=2;
 function thumbCur(){const el=thumbsEl.children[ci];if(el&&stripSig===sigNow())drawThumb(el.firstChild,card())}
 function syncStrip(){const sig=sigNow();
   if(sig!==stripSig){stripSig=sig;
-    thumbsEl.innerHTML=state.cards.map((c,i)=>`<div class="thumb" data-i="${i}"><canvas></canvas><span>${i+1}</span></div>`).join('');
+    thumbsEl.innerHTML=state.cards.map((c,i)=>`<div class="thumb" data-i="${i}"><canvas></canvas><span></span></div>`).join('');
     state.cards.forEach((c,i)=>drawThumb(thumbsEl.children[i].firstChild,c))}
   else thumbCur();
-  [...thumbsEl.children].forEach((el,i)=>el.classList.toggle('sel',i===ci));
-  const el=thumbsEl.children[ci];if(el)el.scrollIntoView({block:'nearest',inline:'nearest'});
-  $('#cardPos').textContent=`카드 ${ci+1} / 총 ${state.cards.length}장`;$('#cLeft').disabled=ci===0;$('#cRight').disabled=ci===state.cards.length-1}
+  [...thumbsEl.children].forEach((el,i)=>{el.classList.toggle('sel',i===ci);el.lastChild.textContent=`${i+1}번 · ${qtyOf(state.cards[i])}장`});
+  const el=thumbsEl.children[ci];if(el)thumbsEl.scrollLeft=Math.max(0,el.offsetLeft-thumbsEl.offsetLeft-(thumbsEl.clientWidth-el.offsetWidth)/2);
+  $('#cardPos').textContent=`카드 ${ci+1} / 총 ${state.cards.length}종`;$('#cLeft').disabled=ci===0;$('#cRight').disabled=ci===state.cards.length-1;
+  const q=$('#qty');if(q!==document.activeElement)q.value=qtyOf(card())}
+function setQty(v){const q=Math.min(9999,Math.max(1,Math.floor(+v)||1));if(q===qtyOf(card())&&card().qty===q)return refresh();card().qty=q;commit();refresh()}
 
 /* ---------- UI ---------- */
 const num=(v,m=1)=>Math.round(v*m*100)/100;
@@ -276,7 +314,8 @@ function buildLayers(){const a=cur().layers;
 function syncCard(){
   const {W,H,FW:fw,FH:fh}=D(),dpi=+$('#dpi').value,px=mm=>Math.round(mm/25.4*dpi);
   document.querySelectorAll('#orientSeg button').forEach(x=>x.classList.toggle('on',x.dataset.o===card().orient));
-  $('#spec').innerHTML=`재단 사이즈 <b>${W}×${H}mm</b><br>이미지 사이즈 <b>${fw}×${fh}mm</b><br>모서리 R${SPEC.radius}mm · 타공 없음`;
+  $('#spec').innerHTML=`재단 사이즈 <b>${W}×${H}mm</b><br>이미지 사이즈 <b>${fw}×${fh}mm</b><br>모서리 R${SPEC.radius}mm · 타공 없음<br>타공이 필요하면 따로 문의해 주세요.`;
+  const t=totals();$('#total').innerHTML=t.kinds?`<b>${t.kinds}종 · 총 ${t.total}장</b><br>단면 ${t.single}장 · 양면 ${t.dbl}장<br>주문 수량과 같아야 합니다.`:'이미지를 넣으면 종류와 수량 합계가 여기에 나옵니다.';
   document.querySelectorAll('#sideSeg button').forEach(x=>{x.classList.toggle('on',x.dataset.side===side);if(x.dataset.side==='back')x.textContent=state.commonBack?'뒷면(공통)':'뒷면'});
   $('#commonBack').checked=state.commonBack;
   $('#tgGuide').classList.toggle('on',showGuides);$('#tgPrev').classList.toggle('on',preview);
@@ -306,14 +345,21 @@ function hitTest(p){const a=cur().layers;for(let i=a.length-1;i>=0;i--){const l=
   const dx=p.x-l.x,dy=p.y-l.y,c=Math.cos(rad(-l.rot)),s=Math.sin(rad(-l.rot)),lx=(dx*c-dy*s)/l.scale,ly=(dx*s+dy*c)/l.scale;
   if(Math.abs(lx)<=l.w/2&&Math.abs(ly)<=l.h/2)return l}return null}
 function hitHandle(l,p){const h=handles(l,p.v),near=(q,r)=>Math.hypot(q.x-p.sx,q.y-p.sy)<=r;
-  if(near(h.rot,11))return'rot';if(h.cs.some(q=>near(q,11)))return'scale';return null}
+  if(near(h.rot,HR))return'rot';if(h.cs.some(q=>near(q,HR)))return'scale';return null}
+const pts=new Map();let pinch=null; // 두 손가락 벌리기·오므리기로 크기 조절
+const pinchDist=()=>{const [a,b]=[...pts.values()];return Math.hypot(a.x-b.x,a.y-b.y)||1};
 cv.addEventListener('pointerdown',e=>{
-  if(preview||busy||e.button!==0)return;const p=evPt(e);let l=sel(),mode=l?hitHandle(l,p):null;
+  if(preview||busy||e.button!==0)return;
+  pts.set(e.pointerId,{x:e.clientX,y:e.clientY});try{cv.setPointerCapture(e.pointerId)}catch{}
+  if(pts.size===2){const s=sel();drag=null;snapV=snapH=false;if(s)pinch={d0:pinchDist(),s0:s.scale};return}
+  if(pts.size>2)return;
+  const p=evPt(e);let l=sel(),mode=l?hitHandle(l,p):null;
   if(!mode){const hit=hitTest(p);if(hit&&hit.id!==selId){selId=hit.id;refresh()}l=hit;if(l)mode='move'}
   if(!mode)return;
-  drag={mode,px:p.x,py:p.y,x:l.x,y:l.y,scale:l.scale,rot:l.rot,d0:Math.hypot(p.x-l.x,p.y-l.y)||1,a0:Math.atan2(p.y-l.y,p.x-l.x),moved:false};
-  cv.setPointerCapture(e.pointerId)});
+  drag={mode,px:p.x,py:p.y,x:l.x,y:l.y,scale:l.scale,rot:l.rot,d0:Math.hypot(p.x-l.x,p.y-l.y)||1,a0:Math.atan2(p.y-l.y,p.x-l.x),moved:false}});
 cv.addEventListener('pointermove',e=>{
+  if(pts.has(e.pointerId))pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch){const s=sel();if(s&&pts.size===2){s.scale=Math.max(.01,pinch.s0*pinchDist()/pinch.d0);syncProps();render()}return}
   const p=evPt(e);
   if(!drag){if(preview)return;const l=sel(),h=l?hitHandle(l,p):null;cv.style.cursor=h==='rot'?'grab':h==='scale'?'nwse-resize':hitTest(p)?'move':'default';return}
   const l=sel();if(!l)return;drag.moved=true;const {W,H}=D();
@@ -324,14 +370,15 @@ cv.addEventListener('pointermove',e=>{
     if(e.shiftKey)r=Math.round(r/15)*15;else if(Math.abs(r)<2)r=0;l.rot=Math.round(r*10)/10}
   syncProps();render()});
 function endDrag(){if(!drag)return;const m=drag.moved;drag=null;snapV=snapH=false;if(m)commit();render()}
-cv.addEventListener('pointerup',endDrag);cv.addEventListener('pointercancel',endDrag);
+function ptrEnd(e){pts.delete(e.pointerId);if(pinch){if(pts.size<2){pinch=null;commit();render()}return}endDrag()}
+cv.addEventListener('pointerup',ptrEnd);cv.addEventListener('pointercancel',ptrEnd);
 let lazyT;const lazyCommit=()=>{clearTimeout(lazyT);lazyT=setTimeout(commit,400)};
 cv.addEventListener('wheel',e=>{const l=sel();if(!l||preview)return;e.preventDefault();
   l.scale=Math.max(.01,l.scale*(e.deltaY<0?1.04:1/1.04));syncProps();render();lazyCommit()},{passive:false});
 
 /* ---------- 키보드·붙여넣기·드롭 ---------- */
 addEventListener('keydown',e=>{
-  const t=e.target,typing=t.tagName==='INPUT'&&t.type==='number'||t.tagName==='SELECT';
+  const t=e.target,typing=t.tagName==='INPUT'&&(t.type==='number'||t.type==='text')||t.tagName==='SELECT';
   const mod=e.ctrlKey||e.metaKey,key=e.key.toLowerCase();
   if(typing||busy)return;
   if(mod&&key==='z'){e.preventDefault();e.shiftKey?redo():undo();return}
@@ -427,26 +474,45 @@ function download(blob,name){const a=document.createElement('a');a.href=URL.crea
 const ZIP_PW='1234'; // 내려받는 ZIP의 압축 암호
 const status=t=>{$('#expStatus').textContent=t};
 const pad=i=>String(i+1).padStart(Math.max(2,String(state.cards.length).length),'0');
-function exportJobs(){const jobs=[];
-  state.cards.forEach((c,i)=>{
-    if(c.front.layers.length)jobs.push({name:`${pad(i)}_앞면_${KO[c.orient]}.eps`,sd:c.front,o:c.orient});
-    if(!state.commonBack&&c.back.layers.length)jobs.push({name:`${pad(i)}_뒷면_${KO[c.orient]}.eps`,sd:c.back,o:c.orient})});
+const hasBack=c=>(state.commonBack?state.common[c.orient]:c.back).layers.length>0;
+function totals(){let kinds=0,total=0,single=0,dbl=0; // 앞면 이미지가 있는 카드만 센다
+  for(const c of state.cards){if(!c.front.layers.length)continue;kinds++;const q=qtyOf(c);total+=q;if(hasBack(c))dbl+=q;else single+=q}
+  return{kinds,total,single,dbl}}
+function exportJobs(){const jobs=[],rows=[];
+  state.cards.forEach((c,i)=>{if(!c.front.layers.length)return;
+    const q=qtyOf(c),tag=`${KO[c.orient]}_${q}장`,fs=[`${pad(i)}_앞면_${tag}.eps`];
+    jobs.push({name:fs[0],sd:c.front,o:c.orient});
+    if(state.commonBack){if(state.common[c.orient].layers.length)fs.push(`공통_뒷면_${KO[c.orient]}.eps`)}
+    else if(c.back.layers.length){fs.push(`${pad(i)}_뒷면_${tag}.eps`);jobs.push({name:fs[1],sd:c.back,o:c.orient})}
+    rows.push(`${pad(i)}번 | ${KO[c.orient]} | ${fs.length>1?'양면':'단면'} | ${q}장 | ${fs.join(' + ')}`)});
   if(state.commonBack)for(const o of['portrait','landscape'])
-    if(state.common[o].layers.length&&state.cards.some(c=>c.orient===o))jobs.push({name:`공통_뒷면_${KO[o]}.eps`,sd:state.common[o],o});
-  return jobs}
+    if(state.common[o].layers.length&&state.cards.some(c=>c.orient===o&&c.front.layers.length))jobs.push({name:`공통_뒷면_${KO[o]}.eps`,sd:state.common[o],o});
+  return{jobs,rows}}
+const cleanName=s=>s.replace(/[\\/:*?"<>|\x00-\x1f]/g,'').trim().slice(0,20);
 async function exportAll(){
-  if(busy)return;const dpi=+$('#dpi').value,jobs=exportJobs();
-  if(!jobs.length)return alert('내보낼 내용이 없습니다. 카드에 이미지를 먼저 넣어 주세요.');
+  if(busy)return;const dpi=+$('#dpi').value,{jobs,rows}=exportJobs(),name=cleanName($('#oname').value);
+  if(!jobs.length)return alert('내보낼 내용이 없습니다. 카드 앞면에 이미지를 먼저 넣어 주세요.');
+  if(!name){alert('주문자명을 입력해 주세요.');$('#oname').focus();return}
   const est=jobs.length*(86.5/25.4*dpi)*(55/25.4*dpi)*3*1.27;
   if(est>3.8e9)return alert('한 번에 받기에는 용량이 너무 큽니다(4GB 초과). 300dpi로 낮추거나 카드를 나누어 내보내 주세요.');
   busy=true;const files=[];
   try{for(let i=0;i<jobs.length;i++){status(`EPS 만드는 중… ${i+1} / ${jobs.length}`);await new Promise(r=>setTimeout(r,0));
       files.push({name:jobs[i].name,data:epsOf(jobs[i].sd,jobs[i].o,dpi,'photocard '+(i+1))})}
     status('ZIP으로 묶는 중…');await new Promise(r=>setTimeout(r,0));
-    download(zipStore(files,ZIP_PW),`포토카드_${state.cards.length}장_${dpi}dpi.zip`);status(`완료: EPS ${files.length}개를 암호가 걸린 ZIP으로 저장했습니다.`)}
+    const t=totals(),n=new Date(),p2=v=>String(v).padStart(2,'0');
+    const sheet=['[포토카드 주문 내역]',`주문자명: ${name}`,`작성일시: ${n.getFullYear()}-${p2(n.getMonth()+1)}-${p2(n.getDate())} ${p2(n.getHours())}:${p2(n.getMinutes())}`,
+      `규격: 재단 ${SPEC.L}×${SPEC.S}mm / 이미지 ${SPEC.FL}×${SPEC.FS}mm / 모서리 R${SPEC.radius}mm / 타공 없음`,
+      `합계: ${t.kinds}종 · 총 ${t.total}장 (단면 ${t.single}장, 양면 ${t.dbl}장)`,`해상도: ${dpi}dpi`,'','번호 | 방향 | 인쇄 | 수량 | 파일',...rows,''].join('\r\n');
+    const eps=files.length;files.push({name:'주문내역.txt',data:new TextEncoder().encode('﻿'+sheet)});
+    download(zipStore(files,ZIP_PW),`포토카드_${name}_${t.kinds}종_${t.total}장.zip`);status(`완료: EPS ${eps}개와 주문내역을 암호가 걸린 ZIP으로 저장했습니다.`)}
   catch(err){status('');alert('내보내기 실패: '+err.message)}
   finally{busy=false}}
 $('#expAll').onclick=exportAll;
+$('#fab').onclick=()=>$('#fileCards').click();
+$('#qMinus').onclick=()=>setQty(qtyOf(card())-1);$('#qPlus').onclick=()=>setQty(qtyOf(card())+1);
+$('#qty').onchange=e=>setQty(e.target.value);
+try{$('#oname').value=localStorage.getItem('pc_oname')||''}catch{}
+$('#oname').oninput=e=>{try{localStorage.setItem('pc_oname',e.target.value)}catch{}};
 
 /* ---------- 시작 ---------- */
 new ResizeObserver(render).observe(stage);
