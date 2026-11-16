@@ -7,11 +7,11 @@
 <script>try{document.documentElement.dataset.theme=localStorage.getItem('pc_theme')||'light'}catch(e){document.documentElement.dataset.theme='light'}</script>
 <style>
 /* 블랙 모드(기본 변수) */
-:root{color-scheme:dark;--bg:#15161a;--panel:#1e2026;--line:#30333c;--fg:#e8e9ee;--mut:#9a9eab;--acc:#ff4d8d;--acc2:#3ec5ff;--in:#282b33;
+:root{color-scheme:dark;--bg:#15161a;--panel:#1e2026;--line:#30333c;--fg:#e8e9ee;--mut:#9a9eab;--acc:#ff4d8d;--acc2:#3ec5ff;--in:#282b33;--card:#2b2e38;--chip:rgba(255,77,141,.24);
   --stage1:#2a2c35;--stage2:#15161a;--hovb:#555a68;--hov:#30343e;--selbg:#3a2530;
   --okbg:#1d3327;--okfg:#7be0a4;--warnbg:#3b2a1a;--warnfg:#ffb866;--badbg:#3d1f24;--badfg:#ff8a8a;--pvbg:rgba(12,13,16,.97)}
 /* 화이트 모드: 밝은 베이지 배경 */
-:root[data-theme=light]{color-scheme:light;--bg:#f3ecdf;--panel:#fbf7ef;--line:#ddd1bc;--fg:#2b2622;--mut:#7c7265;--in:#ffffff;
+:root[data-theme=light]{color-scheme:light;--bg:#f3ecdf;--panel:#fbf7ef;--line:#ddd1bc;--fg:#2b2622;--mut:#7c7265;--in:#ffffff;--card:#f1e8d8;--chip:rgba(255,77,141,.16);
   --stage1:#f8f3e9;--stage2:#eadfcb;--hovb:#c2b49b;--hov:#f4ede0;--selbg:#ffe3ec;
   --okbg:#dff3e6;--okfg:#1c7a44;--warnbg:#fdebd0;--warnfg:#9a5700;--badbg:#fde0e0;--badfg:#b02a2a;--pvbg:rgba(243,236,223,.98)}
 *{box-sizing:border-box}
@@ -85,13 +85,15 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 .qty button{padding:4px 10px}
 .qty input[type=number]{width:58px;text-align:center}
 .backOpt{margin:6px 2px 12px}
-#saveBox{margin-top:34px;border:1px solid var(--line);border-top:3px solid var(--acc);border-radius:10px;padding:18px 16px 16px;background:var(--in)}
-#saveBox .saveT{font-size:14px;font-weight:700;margin-bottom:10px}
-#sum{font-size:12px;line-height:1.7;color:var(--mut);margin-bottom:16px}
-#sum b{color:var(--fg);font-size:13px}
-#saveBtn{display:flex;flex-direction:column;align-items:center;gap:8px;margin:0!important;padding:22px 10px 20px!important;border-radius:12px}
-#saveBtn b{font-size:23px;font-weight:700;letter-spacing:.1em;line-height:1.2}
-#saveBtn span{font-size:10.5px;font-weight:400;opacity:.9}
+#saveBox{margin-top:30px;border-radius:14px;padding:16px 14px 14px;background:var(--card)}
+#saveBox .saveT{font-size:15px;font-weight:700;margin-bottom:10px}
+#sum{display:inline-block;font-size:11.5px;line-height:1.5;color:var(--fg);background:var(--chip);border-radius:12px;padding:4px 11px;margin-bottom:14px;white-space:normal}
+#saveBtn{display:flex;align-items:center;gap:12px;text-align:left;margin:0!important;padding:15px 14px!important;border-radius:12px}
+#saveBtn svg{flex:none;width:30px;height:30px}
+#saveBtn .tx{display:flex;flex-direction:column;gap:3px;min-width:0}
+#saveBtn b{font-size:19px;font-weight:700;line-height:1.2}
+#saveBtn i{font-style:normal;font-size:10.5px;font-weight:400;opacity:.92}
+.ico{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #okDlg{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px}
 #okDlg[hidden]{display:none}
 #okDlg .box{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--acc);border-radius:14px;padding:22px 20px 16px;width:100%;max-width:360px}
@@ -113,8 +115,11 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 #left .spec{padding:11px 13px;line-height:1.85;margin-bottom:12px}
 #left .full{margin-bottom:12px}
 #left #orientAll{margin-bottom:0}
-#left #addCards{margin-bottom:27px}
-#left .backOpt{margin:0 2px 27px}
+#left #addCards,#left #pvBtn{padding:14px 10px;font-size:14px;border-radius:12px}
+#left #addCards{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:24px}
+#left #addCards svg{flex:none;width:22px;height:22px}
+#left .backOpt{margin:0 2px 24px;gap:9px}
+#left .backOpt input{width:17px;height:17px;accent-color:var(--acc)}
 #left #pvBtn{margin-bottom:0}
 #fab{display:none;position:absolute;left:8px;top:8px;z-index:2}
 button{touch-action:manipulation}
@@ -191,7 +196,7 @@ button{touch-action:manipulation}
   <button class="full" id="orientAll">모든 카드를 이 방향으로</button>
 
   <h2>이미지</h2>
-  <button id="addCards" class="pri full">🖼 이미지 추가하기</button>
+  <button id="addCards" class="pri full"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5-5-8 8"/></svg>이미지 추가하기</button>
   <input type="file" id="fileCards" accept="image/*" multiple hidden>
   <label class="c backOpt"><input type="checkbox" id="commonBack">모든 카드가 같은 뒷면 사용</label>
   <button class="pri full" id="pvBtn">🔍 전체 미리보기</button>
@@ -199,7 +204,7 @@ button{touch-action:manipulation}
   <div id="saveBox">
     <div class="saveT">저장 · 시안 확정</div>
     <div id="sum"></div>
-    <button class="pri full" id="saveBtn"><b>저장하기</b><span>파일 저장하고 시안 확정하기</span></button>
+    <button class="pri full" id="saveBtn"><svg class="ico" viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M4.5 17.5V19a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5v-1.5"/></svg><span class="tx"><b>저장하기</b><i>파일 저장하고 시안 확정하기</i></span></button>
   </div>
 </aside>
 
@@ -486,7 +491,7 @@ function syncCard(){
   document.querySelectorAll('#orientSeg button').forEach(x=>x.classList.toggle('on',x.dataset.o===card().orient));
   $('#spec').innerHTML=`재단 사이즈 <b>${W}×${H}mm</b><br>이미지 사이즈 <b>${fw}×${fh}mm</b><br>모서리 R${SPEC.radius}mm · 타공 없음<br>타공이 필요하면 따로 문의해 주세요.`;
   const t=totals();$('#total').textContent=t.kinds?`${t.kinds}종 · 총 ${t.total}장 (단면 ${t.single}장, 양면 ${t.dbl}장)`:'';
-  $('#sum').innerHTML=t.kinds?`<b>${t.kinds}종 · 총 ${t.total}장</b><br>단면 ${t.single}장 · 양면 ${t.dbl}장`:'이미지를 넣으면 수량이 표시됩니다';
+  $('#sum').innerHTML=t.kinds?`${t.kinds}종 · 총 ${t.total}장 (단면 ${t.single}장 · 양면 ${t.dbl}장)`:'이미지를 넣으면 수량이 표시됩니다';
   document.querySelectorAll('#sideSeg button').forEach(x=>{x.classList.toggle('on',x.dataset.side===side);if(x.dataset.side==='back')x.textContent=state.commonBack?'뒷면(공통)':'뒷면'});
   $('#commonBack').checked=state.commonBack;
   $('#tgGuide').classList.toggle('on',showGuides);$('#tgPrev').classList.toggle('on',preview);
