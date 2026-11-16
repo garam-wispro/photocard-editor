@@ -85,7 +85,9 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 .qty button{padding:4px 10px}
 .qty input[type=number]{width:58px;text-align:center}
 .backOpt{margin:6px 2px 12px}
-#sum{font-size:12px;line-height:1.7;color:var(--mut);text-align:center;background:var(--in);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:14px}
+#saveBox{margin-top:34px;border:1px solid var(--line);border-top:3px solid var(--acc);border-radius:10px;padding:18px 16px 16px;background:var(--in)}
+#saveBox .saveT{font-size:14px;font-weight:700;margin-bottom:10px}
+#sum{font-size:12px;line-height:1.7;color:var(--mut);margin-bottom:16px}
 #sum b{color:var(--fg);font-size:13px}
 #saveBtn{display:flex;flex-direction:column;align-items:center;gap:8px;margin:0!important;padding:22px 10px 20px!important;border-radius:12px}
 #saveBtn b{font-size:23px;font-weight:700;letter-spacing:.1em;line-height:1.2}
@@ -114,7 +116,6 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 #left #addCards{margin-bottom:27px}
 #left .backOpt{margin:0 2px 27px}
 #left #pvBtn{margin-bottom:0}
-#left #saveH{margin-top:40px}
 #fab{display:none;position:absolute;left:8px;top:8px;z-index:2}
 button{touch-action:manipulation}
 #inapp{background:var(--warnbg);color:var(--warnfg);padding:8px 12px;font-size:13px;line-height:1.6}
@@ -195,9 +196,11 @@ button{touch-action:manipulation}
   <label class="c backOpt"><input type="checkbox" id="commonBack">모든 카드가 같은 뒷면 사용</label>
   <button class="pri full" id="pvBtn">🔍 전체 미리보기</button>
 
-  <h2 id="saveH">저장 · 시안 확정</h2>
-  <div id="sum"></div>
-  <button class="pri full" id="saveBtn"><b>저장하기</b><span>파일 저장하고 시안 확정하기</span></button>
+  <div id="saveBox">
+    <div class="saveT">저장 · 시안 확정</div>
+    <div id="sum"></div>
+    <button class="pri full" id="saveBtn"><b>저장하기</b><span>파일 저장하고 시안 확정하기</span></button>
+  </div>
 </aside>
 
 <section id="center">
