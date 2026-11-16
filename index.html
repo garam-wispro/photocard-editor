@@ -85,15 +85,18 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 .qty button{padding:4px 10px}
 .qty input[type=number]{width:58px;text-align:center}
 .backOpt{margin:6px 2px 12px}
-.save{margin-top:16px;border:1px solid var(--line);border-top:3px solid var(--acc);border-radius:10px;padding:12px;background:var(--in)}
-.saveT{font-size:14px;font-weight:700;margin-bottom:10px}
-.save label.f{display:block;font-size:12px;font-weight:700;color:var(--fg);margin-bottom:10px}
-.save label.f em{font-style:normal;font-weight:400;font-size:11px;color:var(--acc)}
-.save label.f input{display:block;margin-top:4px;font-weight:400}
-.save .full{margin-bottom:8px}
-#total{font-size:12px;color:var(--mut);text-align:center;margin:2px 0 8px}
+#saveBtn{margin-top:22px;padding:20px 10px!important;font-size:18px;font-weight:800;letter-spacing:.04em;border-radius:12px}
+#okDlg{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px}
+#okDlg[hidden]{display:none}
+#okDlg .box{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--acc);border-radius:14px;padding:22px 20px 16px;width:100%;max-width:360px}
+#okDlg .saveT{font-size:16px;font-weight:700;margin-bottom:18px}
+#okDlg label.f{display:block;font-size:12px;font-weight:700;color:var(--fg);margin-bottom:16px}
+#okDlg label.f em{font-style:normal;font-weight:400;font-size:11px;color:var(--acc)}
+#okDlg label.f input{display:block;margin-top:7px;padding:9px 10px;font-weight:400}
+#okDlg small{display:block;text-align:center;margin:8px 0 0}
+#total{font-size:12px;color:var(--mut);text-align:center;margin:2px 0 12px}
 #total:empty{display:none}
-#expStatus{font-size:12px;color:var(--acc);margin:0 0 8px;text-align:center}
+#expStatus{font-size:12px;color:var(--acc);margin:0 0 12px;text-align:center;line-height:1.6}
 #expStatus:empty{display:none}
 /* 왼쪽 패널 여백: 묶음 사이는 넓게, 묶음 안은 고르게 */
 #left{padding:16px 14px 28px}
@@ -105,18 +108,11 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 #left .full{margin-bottom:12px}
 #left #orientAll{margin-bottom:0}
 #left .backOpt{margin:4px 2px 16px}
-#left .save{margin-top:28px;padding:18px 16px 14px}
-#left .saveT{margin-bottom:16px}
-#left .save label.f{margin-bottom:16px}
-#left .save label.f input{margin-top:7px;padding:8px 10px}
-#left #total{margin:2px 0 12px}
-#left .save .full{margin-bottom:4px}
-#left #expStatus{margin:-4px 0 12px;line-height:1.6}
 #fab{display:none;position:absolute;left:8px;top:8px;z-index:2}
 button{touch-action:manipulation}
 #inapp{background:var(--warnbg);color:var(--warnfg);padding:8px 12px;font-size:13px;line-height:1.6}
 #inapp button{padding:3px 8px;min-height:0;margin-left:4px}
-#done{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px}
+#done{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px}
 #done[hidden]{display:none}
 #done .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;width:100%;max-width:360px}
 #doneName{color:var(--mut);font-size:12px;margin:6px 0 12px;word-break:break-all}
@@ -124,7 +120,12 @@ button{touch-action:manipulation}
 #pv[hidden]{display:none}
 #pvBar{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
 #pvSum{color:var(--mut);margin-left:6px}
-#pvGrid{flex:1;overflow:auto;display:flex;flex-wrap:wrap;gap:14px;padding:16px;align-content:flex-start;justify-content:center}
+#pvBody{flex:1;overflow:auto}
+#pvConfirm{max-width:780px;margin:10px auto 48px;padding:0 16px;text-align:center}
+#pvConfirm[hidden]{display:none}
+#pvNotice{text-align:left;white-space:pre-line;word-break:keep-all;font-size:13px;line-height:1.85;color:var(--fg);background:var(--in);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:18px}
+#pvOk{padding:16px 56px;font-size:18px;font-weight:800;letter-spacing:.04em;border-radius:12px}
+#pvGrid{display:flex;flex-wrap:wrap;gap:14px;padding:16px;align-content:flex-start;justify-content:center}
 .pvCell{border:1px solid #ff9d2e;border-radius:12px;padding:10px 12px 12px;background:var(--panel)}
 .pvCell h3{font-size:13px;margin:0 0 8px;display:flex;gap:8px;align-items:center}
 .pvCell h3 em{font-style:normal;font-weight:400;color:var(--warnfg);font-size:11px}
@@ -187,14 +188,7 @@ button{touch-action:manipulation}
   <label class="c backOpt"><input type="checkbox" id="commonBack">모든 카드가 같은 뒷면 사용</label>
   <button class="pri full" id="pvBtn">🔍 전체 미리보기</button>
 
-  <div class="save">
-    <div class="saveT">저장하기</div>
-    <label class="f">주문자명 <em>(필수)</em><input type="text" id="oname" maxlength="20" placeholder="주문하신 분 성함" autocomplete="name"></label>
-    <label class="f">주문번호 <em>(필수)</em><input type="text" id="ono" maxlength="30" placeholder="쇼핑몰 주문번호" inputmode="numeric"></label>
-    <div id="total"></div>
-    <button class="pri full" id="expAll">전체 카드 EPS 받기 (ZIP)</button>
-    <div id="expStatus"></div>
-  </div>
+  <button class="pri full" id="saveBtn">저장하기</button>
 </aside>
 
 <section id="center">
@@ -234,8 +228,36 @@ button{touch-action:manipulation}
 
 <div id="pv" hidden>
   <div id="pvBar"><div><b>전체 미리보기</b> <span id="pvSum"></span></div><button id="pvClose" class="pri">닫기 ✕</button></div>
-  <div id="pvGrid"></div>
+  <div id="pvBody">
+    <div id="pvGrid"></div>
+    <div id="pvConfirm">
+      <div id="pvNotice">안녕하세요 고객님^^
+제품 시안 담당자입니다
+보내주신 단면 시안으로 저희 측 칼선에 맞게끔 작업 후 보내드립니다.
+칼선에는 상하좌우 0.5mm 정도의 여유분이 포함되어있어 일부가 살짝 잘릴 수 있습니다.
+보내드린 이미지는 캡쳐본으로 대략적인 위치나 감도를 보기 위해 보내드리며
+실제 제작 시 나타나는 정확한 색상 차이를 반영하지는 않습니다.
+(캡처본으로 화질은 보내주신 시안과 전혀 무관하며 캡처본이 아닌 보내주신 시안으로 제작되어 집니다)
+양면의 경우 위가 앞면, 아래가 뒷면기준입니다.
+++ 시안 확정 전 시안 해당 제품상세페이지 내에 있는 주문제작상품 안내사항을 숙지하시고,
+저희가 보내드린 시안 오타 ,간격 등 확인 후 확정 회신/수정 회신 부탁드립니다.
+(시안확정 회신을 안해주시는 경우 제작이 지연될 수 있습니다, 필히 확인 후 저희쪽으로 확정답변 주셔야 합니다.)
+시안 작업 이후에는 취소/환불이 불가능합니다.</div>
+      <button class="pri" id="pvOk">제작확정</button>
+    </div>
+  </div>
 </div>
+
+<div id="okDlg" hidden><div class="box">
+  <div class="saveT">제작확정</div>
+  <label class="f">주문자명 <em>(필수)</em><input type="text" id="oname" maxlength="20" placeholder="주문하신 분 성함" autocomplete="name"></label>
+  <label class="f">주문번호 <em>(필수)</em><input type="text" id="ono" maxlength="30" placeholder="쇼핑몰 주문번호" inputmode="numeric"></label>
+  <div id="total"></div>
+  <div id="expStatus"></div>
+  <button class="pri full" id="expAll">확인</button>
+  <button class="full" id="okClose" style="margin-top:8px">닫기</button>
+  <small>확인을 누르면 제작용 파일(ZIP)이 저장됩니다.</small>
+</div></div>
 
 <script>
 // 새 버전이 올라왔는데 브라우저가 옛 화면을 기억하고 있으면, 열자마자 한 번 새로 받아 온다
@@ -535,7 +557,7 @@ cv.addEventListener('wheel',e=>{const l=sel();if(!l||preview)return;e.preventDef
 addEventListener('keydown',e=>{
   const t=e.target,typing=t.tagName==='INPUT'&&(t.type==='number'||t.type==='text')||t.tagName==='SELECT';
   const mod=e.ctrlKey||e.metaKey,key=e.key.toLowerCase();
-  if(!$('#pv').hidden){if(key==='escape')closePreview();return}
+  if(!$('#pv').hidden){if(key==='escape'){if(!$('#okDlg').hidden)$('#okClose').click();else closePreview()}return}
   if(typing||busy)return;
   if(mod&&key==='z'){e.preventDefault();e.shiftKey?redo():undo();return}
   if(mod&&key==='y'){e.preventDefault();redo();return}
@@ -580,9 +602,10 @@ function openPreview(){const grid=$('#pvGrid'),t=totals();grid.innerHTML='';
     add(c.front,'앞면');if(dbl)add(back,state.commonBack?'뒷면(공통)':'뒷면');
     cell.onclick=()=>{closePreview();selectCard(i)};cell.style.cursor='pointer';cell.title='누르면 이 카드를 편집합니다';
     grid.appendChild(cell)});
-  $('#pv').hidden=false;document.body.style.overflow='hidden';grid.scrollTop=0}
+  $('#pvConfirm').hidden=!t.kinds;
+  $('#pv').hidden=false;document.body.style.overflow='hidden';$('#pvBody').scrollTop=0}
 function closePreview(){$('#pv').hidden=true;document.body.style.overflow=''}
-$('#tgPrev').onclick=openPreview;$('#pvBtn').onclick=openPreview;$('#pvClose').onclick=closePreview;
+$('#tgPrev').onclick=openPreview;$('#pvBtn').onclick=openPreview;$('#saveBtn').onclick=openPreview;$('#pvClose').onclick=closePreview;
 $('#cAdd').onclick=addCard;$('#cDel').onclick=delCard;$('#cLeft').onclick=()=>moveCard(-1);$('#cRight').onclick=()=>moveCard(1);
 
 /* ---------- 내보내기 ---------- */
@@ -704,7 +727,7 @@ async function exportAll(){
   if(!ono){alert('주문번호를 입력해 주세요.');$('#ono').focus();return}
   const nArts=cards.reduce((a,x)=>a+(x.dbl?2:1),0);
   if(nArts*(SPEC.FL/25.4*dpi)*(SPEC.FS/25.4*dpi)*3>3.8e9)return alert('한 번에 받기에는 용량이 너무 큽니다(4GB 초과). 카드를 나누어 내보내 주세요.');
-  busy=true;
+  busy=true;$('#expAll').disabled=true;
   try{const t=totals(),cells=[],common={};
     for(let i=0;i<cards.length;i++){const {c,no,q,dbl}=cards[i];status(`대지 만드는 중… ${i+1} / ${cards.length}`);await new Promise(r=>setTimeout(r,0));
       const arts=[{...artOf(c.front,c.orient,dpi),name:no+'_앞면'}];
@@ -717,10 +740,14 @@ async function exportAll(){
       `규격: 재단 ${SPEC.L}×${SPEC.S}mm / 대지 ${SPEC.FL}×${SPEC.FS}mm / 모서리 R${SPEC.radius}mm / 타공 없음`,`합계: ${sum}`,`해상도: ${dpi}dpi`,
       '세로형 카드는 대지에 시계 반대 방향으로 90° 돌려 넣었습니다(카드 윗부분이 대지 왼쪽).','','번호 | 방향 | 인쇄 | 수량 | 대지',...rows,''].join('\r\n');
     const files=[{name:base+'.eps',data:buildSheet(cells,header,'photocard','eps')},{name:'주문내역.txt',data:new TextEncoder().encode('﻿'+sheet)}];
-    deliver(zipStore(files,ZIP_PW),base+'.zip');status(`완료: 대지 ${nArts}개가 들어간 EPS와 주문내역을 암호가 걸린 ZIP으로 저장했습니다.`)}
+    deliver(zipStore(files,ZIP_PW),base+'.zip');status('저장이 끝났습니다. 내려받은 ZIP 파일을 주문하신 곳으로 보내 주세요.')}
   catch(err){status('');alert('내보내기 실패: '+err.message)}
-  finally{busy=false}}
+  finally{busy=false;$('#expAll').disabled=false}}
 $('#expAll').onclick=exportAll;
+// 제작확정 → 주문자명·주문번호를 적고 확인을 누르면 파일을 받는다
+$('#pvOk').onclick=()=>{status('');$('#okDlg').hidden=false;const a=$('#oname');(a.value.trim()?$('#ono'):a).focus()};
+$('#okClose').onclick=()=>{if(!busy)$('#okDlg').hidden=true};
+$('#okDlg').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT'){e.preventDefault();exportAll()}});
 function setTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('pc_theme',t)}catch{}
   document.querySelectorAll('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));render()}
 document.querySelectorAll('#themeSeg button').forEach(b=>b.onclick=()=>setTheme(b.dataset.t));
