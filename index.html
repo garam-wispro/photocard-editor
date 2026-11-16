@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>포토카드 에디터</title>
+<title>낭만인쇄소 포토카드 에디터</title>
 <style>
 :root{--bg:#15161a;--panel:#1e2026;--line:#30333c;--fg:#e8e9ee;--mut:#9a9eab;--acc:#ff4d8d;--acc2:#3ec5ff;--in:#282b33}
 *{box-sizing:border-box}
@@ -92,7 +92,8 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
   html,body{height:auto;min-height:100%}
   body{overflow:visible;display:block}
   header{flex-wrap:wrap;gap:6px;padding:6px 8px;position:sticky;top:0;z-index:5}
-  header h1,.sp,.pc{display:none}
+  .sp,.pc{display:none}
+  header h1{flex-basis:100%;margin:0;font-size:14px}
   header button{padding:7px 9px}
   main{display:flex;flex-direction:column}
   #center{display:block;order:1;flex:none}
@@ -115,7 +116,7 @@ kbd{background:var(--in);border:1px solid var(--line);border-radius:4px;padding:
 </head>
 <body>
 <header>
-  <h1><b>포토카드</b> 에디터</h1>
+  <h1>낭만인쇄소 <b>포토카드</b> 에디터</h1>
   <div class="seg" id="sideSeg"><button data-side="front" class="on">앞면</button><button data-side="back">뒷면</button></div>
   <button id="undo" title="Ctrl+Z">↶ 실행 취소</button>
   <button id="redo" title="Ctrl+Y">↷ 다시 실행</button>
@@ -571,7 +572,7 @@ async function exportAll(){
     status('파일로 묶는 중…');await new Promise(r=>setTimeout(r,0));
     const sum=`${t.kinds}종 · 총 ${t.total}장 (단면 ${t.single}장, 양면 ${t.dbl}장)`,n=new Date(),p2=v=>String(v).padStart(2,'0');
     const header=textImg(`주문자 ${name}  ·  주문번호 ${ono}  ·  ${sum}`,48),base=`포토카드_${name}_${ono}_${t.kinds}종_${t.total}장`;
-    const sheet=['[포토카드 주문 내역]',`주문자명: ${name}`,`주문번호: ${ono}`,`작성일시: ${n.getFullYear()}-${p2(n.getMonth()+1)}-${p2(n.getDate())} ${p2(n.getHours())}:${p2(n.getMinutes())}`,
+    const sheet=['[낭만인쇄소 포토카드 주문 내역]',`주문자명: ${name}`,`주문번호: ${ono}`,`작성일시: ${n.getFullYear()}-${p2(n.getMonth()+1)}-${p2(n.getDate())} ${p2(n.getHours())}:${p2(n.getMinutes())}`,
       `규격: 재단 ${SPEC.L}×${SPEC.S}mm / 대지 ${SPEC.FL}×${SPEC.FS}mm / 모서리 R${SPEC.radius}mm / 타공 없음`,`합계: ${sum}`,`해상도: ${dpi}dpi`,
       '세로형 카드는 대지에 시계 반대 방향으로 90° 돌려 넣었습니다(카드 윗부분이 대지 왼쪽).','','번호 | 방향 | 인쇄 | 수량 | 대지',...rows,''].join('\r\n');
     const files=[{name:base+'.eps',data:buildSheet(cells,header,'photocard','eps')},{name:'주문내역.txt',data:new TextEncoder().encode('﻿'+sheet)}];
