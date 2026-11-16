@@ -253,7 +253,14 @@ const blank=()=>({layers:[]});
 const newCard=o=>({id:uid(),orient:o,qty:1,front:blank(),back:blank()});
 const qtyOf=c=>Math.min(9999,Math.max(1,Math.floor(+c.qty)||1));
 const COARSE=matchMedia('(pointer:coarse)').matches,HR=COARSE?22:11,HS=COARSE?8:5,RO=COARSE?30:19,RZ=COARSE?52:32;
-const ROTCUR='url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 16a8 8 0 0 1 13 0M2.5 11.5l2.5 5 5-2.5M21.5 11.5l-2.5 5-5-2.5" stroke="#fff" stroke-width="4.5"/><path d="M5.5 16a8 8 0 0 1 13 0M2.5 11.5l2.5 5 5-2.5M21.5 11.5l-2.5 5-5-2.5" stroke="#111" stroke-width="1.8"/></g></svg>')+'") 12 12,grab'; // 손가락용으로 조절점을 크게
+const rotCurs={};
+function rotCur(a){const g=Math.round(a*180/Math.PI/5)*5;if(rotCurs[g])return rotCurs[g]; // 모서리의 회전 기호와 같은 모양·같은 방향의 커서
+  const r=15,d=.62,cx=16-r,P=[],n2=v=>v.toFixed(2);let hd='';
+  for(const s of[-1,1]){const t=s*d,nx=Math.cos(t),ny=Math.sin(t),ex=cx+r*nx,ey=16+r*ny,tx=-ny*s,ty=nx*s;P.push(n2(ex)+' '+n2(ey));
+    hd+='M'+n2(ex+tx*5)+' '+n2(ey+ty*5)+'L'+n2(ex+nx*3.4)+' '+n2(ey+ny*3.4)+'L'+n2(ex-nx*3.4)+' '+n2(ey-ny*3.4)+'Z'}
+  const arc='M'+P[0]+'A'+r+' '+r+' 0 0 1 '+P[1];
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><g transform="rotate('+g+' 16 16)" stroke-linejoin="round" stroke-linecap="round"><path d="'+arc+'" fill="none" stroke="#fff" stroke-width="4.5"/><path d="'+hd+'" fill="#fff" stroke="#fff" stroke-width="3"/><path d="'+arc+'" fill="none" stroke="#ff4d8d" stroke-width="2"/><path d="'+hd+'" fill="#ff4d8d"/></g></svg>';
+  return rotCurs[g]='url("data:image/svg+xml,'+encodeURIComponent(svg)+'") 16 16,grab'}
 const MAXPX=COARSE?2600:4000; // 보관하는 이미지의 긴 변 최대 픽셀(600dpi 인쇄에 필요한 2043px보다 충분히 큼)
 if(!CanvasRenderingContext2D.prototype.roundRect)CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){ // 구형 휴대폰 브라우저용
   r=Math.max(0,Math.min(+r||0,w/2,h/2));this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath()};
@@ -480,9 +487,9 @@ function hitTest(p){const a=cur().layers;for(let i=a.length-1;i>=0;i--){const l=
 function hitHandle(l,p){const h=handles(l,p.v),near=(q,r)=>Math.hypot(q.x-p.sx,q.y-p.sy)<=r;
   let i=h.cs.findIndex(q=>near(q,HR));if(i>=0)return{t:'corner',i};
   if(cropMode||!LOCK(l)){i=h.es.findIndex(q=>near(q,HR));if(i>=0)return{t:'edge',i}}
-  if(!cropMode&&h.cs.some(q=>near(q,RZ))){ // 일러스트레이터처럼: 모서리 바로 바깥을 잡으면 회전
+  const j=cropMode?-1:h.cs.findIndex(q=>near(q,RZ));if(j>=0){ // 일러스트레이터처럼: 모서리 바로 바깥을 잡으면 회전
     const dx=p.x-l.x,dy=p.y-l.y,c=Math.cos(rad(-l.rot)),s=Math.sin(rad(-l.rot));
-    if(Math.abs(dx*c-dy*s)>l.w*l.scale/2||Math.abs(dx*s+dy*c)>l.h*SY(l)/2)return{t:'rot'}}
+    if(Math.abs(dx*c-dy*s)>l.w*l.scale/2||Math.abs(dx*s+dy*c)>l.h*SY(l)/2)return{t:'rot',a:Math.atan2(h.rs[j].y-h.cs[j].y,h.rs[j].x-h.cs[j].x)}}
   return null}
 const pts=new Map();let pinch=null; // 두 손가락 벌리기·오므리기로 크기 조절
 const pinchDist=()=>{const [a,b]=[...pts.values()];return Math.hypot(a.x-b.x,a.y-b.y)||1};
@@ -494,12 +501,12 @@ cv.addEventListener('pointerdown',e=>{
   const p=evPt(e);let l=sel();const hh=l?hitHandle(l,p):null;let mode=hh?hh.t:null;
   if(!mode){const hit=hitTest(p);if(hit&&hit.id!==selId){selId=hit.id;refresh()}l=hit;if(l)mode='move'}
   if(!mode)return;
-  drag={mode,i:hh?hh.i:0,F:cropMode&&hh?frameOf(l):null,h0:l.h*SY(l),px:p.x,py:p.y,x:l.x,y:l.y,scale:l.scale,rot:l.rot,d0:Math.hypot(p.x-l.x,p.y-l.y)||1,a0:Math.atan2(p.y-l.y,p.x-l.x),moved:false}});
+  drag={mode,i:hh?hh.i:0,ca:hh?hh.a:0,F:cropMode&&hh?frameOf(l):null,h0:l.h*SY(l),px:p.x,py:p.y,x:l.x,y:l.y,scale:l.scale,rot:l.rot,d0:Math.hypot(p.x-l.x,p.y-l.y)||1,a0:Math.atan2(p.y-l.y,p.x-l.x),moved:false}});
 cv.addEventListener('pointermove',e=>{
   if(pts.has(e.pointerId))pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pinch){const s=sel();if(s&&pts.size===2){s.scale=Math.max(.01,pinch.s0*pinchDist()/pinch.d0);syncProps();render()}return}
   const p=evPt(e);
-  if(!drag){if(preview)return;const l=sel(),h=l?hitHandle(l,p):null;cv.style.cursor=!h?(hitTest(p)?'move':'default'):h.t==='rot'?ROTCUR:h.t==='edge'?(h.i%2?'ew-resize':'ns-resize'):'nwse-resize';return}
+  if(!drag){if(preview)return;const l=sel(),h=l?hitHandle(l,p):null;cv.style.cursor=!h?(hitTest(p)?'move':'default'):h.t==='rot'?rotCur(h.a):h.t==='edge'?(h.i%2?'ew-resize':'ns-resize'):'nwse-resize';return}
   const l=sel();if(!l)return;drag.moved=true;const {W,H}=D();
   if(drag.mode==='move'){l.x=drag.x+p.x-drag.px;l.y=drag.y+p.y-drag.py;snapV=snapH=false;
     if(!e.altKey){const t=6/p.v.k;if(Math.abs(l.x-W/2)<t){l.x=W/2;snapV=true}if(Math.abs(l.y-H/2)<t){l.y=H/2;snapH=true}}}
@@ -515,7 +522,7 @@ cv.addEventListener('pointermove',e=>{
       else if(drag.i%2){l.scale=Math.max(1,2*lx)/l.w;l.ar=drag.h0/(l.h*l.scale)}
       else l.ar=Math.max(1,2*ly)/(l.h*l.scale)}}
   else{let r=drag.rot+(Math.atan2(p.y-l.y,p.x-l.x)-drag.a0)*180/Math.PI;r=((r+180)%360+360)%360-180;
-    if(e.shiftKey)r=Math.round(r/15)*15;else if(Math.abs(r)<2)r=0;l.rot=Math.round(r*10)/10}
+    if(e.shiftKey)r=Math.round(r/15)*15;else if(Math.abs(r)<2)r=0;l.rot=Math.round(r*10)/10;cv.style.cursor=rotCur(drag.ca+rad(l.rot-drag.rot))}
   syncProps();render()});
 function endDrag(){if(!drag)return;const m=drag.moved;drag=null;snapV=snapH=false;if(m)commit();render()}
 function ptrEnd(e){pts.delete(e.pointerId);if(pinch){if(pts.size<2){pinch=null;commit();render()}return}endDrag()}
