@@ -292,13 +292,14 @@ const blank=()=>({layers:[]});
 const newCard=o=>({id:uid(),orient:o,qty:1,front:blank(),back:blank()});
 const qtyOf=c=>Math.min(9999,Math.max(1,Math.floor(+c.qty)||1));
 const COARSE=matchMedia('(pointer:coarse)').matches,HR=COARSE?22:11,HS=COARSE?8:5,RO=COARSE?30:19,RZ=COARSE?52:32;
+const SELC='#868b98'; // 선택 테두리·조절점·회전 표시는 회색, 분홍은 재단선에만
 const rotCurs={};
 function rotCur(a){const g=Math.round(a*180/Math.PI/5)*5;if(rotCurs[g])return rotCurs[g]; // 모서리의 회전 기호와 같은 모양·같은 방향의 커서
   const r=15,d=.62,cx=16-r,P=[],n2=v=>v.toFixed(2);let hd='';
   for(const s of[-1,1]){const t=s*d,nx=Math.cos(t),ny=Math.sin(t),ex=cx+r*nx,ey=16+r*ny,tx=-ny*s,ty=nx*s;P.push(n2(ex)+' '+n2(ey));
     hd+='M'+n2(ex+tx*5)+' '+n2(ey+ty*5)+'L'+n2(ex+nx*3.4)+' '+n2(ey+ny*3.4)+'L'+n2(ex-nx*3.4)+' '+n2(ey-ny*3.4)+'Z'}
   const arc='M'+P[0]+'A'+r+' '+r+' 0 0 1 '+P[1];
-  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><g transform="rotate('+g+' 16 16)" stroke-linejoin="round" stroke-linecap="round"><path d="'+arc+'" fill="none" stroke="#fff" stroke-width="4.5"/><path d="'+hd+'" fill="#fff" stroke="#fff" stroke-width="3"/><path d="'+arc+'" fill="none" stroke="#ff4d8d" stroke-width="2"/><path d="'+hd+'" fill="#ff4d8d"/></g></svg>';
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><g transform="rotate('+g+' 16 16)" stroke-linejoin="round" stroke-linecap="round"><path d="'+arc+'" fill="none" stroke="#fff" stroke-width="4.5"/><path d="'+hd+'" fill="#fff" stroke="#fff" stroke-width="3"/><path d="'+arc+'" fill="none" stroke="'+SELC+'" stroke-width="2"/><path d="'+hd+'" fill="'+SELC+'"/></g></svg>';
   return rotCurs[g]='url("data:image/svg+xml,'+encodeURIComponent(svg)+'") 16 16,grab'}
 const MAXPX=COARSE?2600:4000; // 보관하는 이미지의 긴 변 최대 픽셀(600dpi 인쇄에 필요한 2043px보다 충분히 큼)
 if(!CanvasRenderingContext2D.prototype.roundRect)CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){ // 구형 휴대폰 브라우저용
@@ -366,7 +367,7 @@ function render(){checkGap();
     ctx.fillText('이미지를 끌어다 놓거나',v.ox+W*k/2,v.oy+H*k/2-8);ctx.fillText('왼쪽에서 넣어 주세요',v.ox+W*k/2,v.oy+H*k/2+12)}
   if(showGuides){ctx.save();
     ctx.beginPath();ctx.rect(v.ox-bx*k,v.oy-by*k,FW*k,FH*k);ctx.roundRect(v.ox,v.oy,W*k,H*k,R*k);ctx.fillStyle='rgba(255,45,120,.16)';ctx.fill('evenodd');
-    ctx.lineWidth=1.25;ctx.strokeStyle='#ff2d78';ctx.beginPath();ctx.roundRect(v.ox,v.oy,W*k,H*k,R*k);ctx.stroke();
+    ctx.lineWidth=1.5;ctx.strokeStyle='#ff2d78';ctx.setLineDash([6,4]);ctx.beginPath();ctx.roundRect(v.ox,v.oy,W*k,H*k,R*k);ctx.stroke();ctx.setLineDash([]);
     ctx.restore()}
   ctx.save();ctx.strokeStyle='#ffd400';ctx.lineWidth=1;ctx.setLineDash([4,3]);
   if(snapV){ctx.beginPath();ctx.moveTo(v.ox+W*k/2,v.oy-by*k-12);ctx.lineTo(v.ox+W*k/2,v.oy+(H+by)*k+12);ctx.stroke()}
@@ -376,7 +377,7 @@ function render(){checkGap();
   if(l){const h=handles(l,v),a=assets[l.asset];
     if(cropMode&&a){const F=frameOf(l);ctx.save();ctx.translate(v.ox,v.oy);ctx.scale(k,k);ctx.translate(F.cx,F.cy);ctx.rotate(rad(l.rot));ctx.scale(l.flipX?-1:1,1);
       ctx.globalAlpha=.32;ctx.drawImage(l.gray?grayOf(a):a.img,-F.fw/2,-F.fh/2,F.fw,F.fh);ctx.restore()} // 잘려 나간 부분을 흐리게 보여 준다
-    ctx.save();ctx.strokeStyle=cropMode?'#ff9d00':'#ff4d8d';ctx.lineWidth=cropMode?2:1.5;if(cropMode)ctx.setLineDash([6,4]);ctx.beginPath();
+    ctx.save();ctx.strokeStyle=cropMode?'#ff9d00':SELC;ctx.lineWidth=cropMode?2:1.5;if(cropMode)ctx.setLineDash([6,4]);ctx.beginPath();
     h.cs.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();ctx.setLineDash([]);
     if(!cropMode){ctx.save();ctx.fillStyle=ctx.strokeStyle;ctx.lineWidth=1.75;h.rs.forEach((q,i)=>rotIcon(h.cs[i],q));ctx.restore()}
     ctx.fillStyle=cropMode?'#ffd54a':'#fff';
@@ -495,7 +496,7 @@ function syncCard(){
   document.querySelectorAll('#sideSeg button').forEach(x=>{x.classList.toggle('on',x.dataset.side===side);if(x.dataset.side==='back')x.textContent=state.commonBack?'뒷면(공통)':'뒷면'});
   $('#commonBack').checked=state.commonBack;
   $('#tgGuide').classList.toggle('on',showGuides);$('#tgPrev').classList.toggle('on',preview);
-  $('#hint').innerHTML=preview?'재단 후 완성 모습입니다':`<i class="c1">━ 재단선</i><i>분홍 영역 = 잘려 나가는 여유</i>`}
+  $('#hint').innerHTML=preview?'재단 후 완성 모습입니다':`<i class="c1">┅ 재단선</i><i>분홍 영역 = 잘려 나가는 여유</i>`}
 function refresh(){if(selId&&!sel())selId=null;
   if(!selId){const a=cur().layers.filter(l=>!l.hidden);if(a.length)selId=a[a.length-1].id} // 클릭하지 않아도 맨 위 이미지를 바로 조작
   if(cropMode&&cropFor!==selId)cropMode=false;
