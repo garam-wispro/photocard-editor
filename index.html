@@ -190,7 +190,6 @@ button{touch-action:manipulation}
   <div class="sp"></div>
   <div class="seg" id="themeSeg" title="작업 화면 색"><button data-t="light">화이트</button><button data-t="dark">블랙</button></div>
   <button id="tgGuide" class="on">가이드선</button>
-  <button id="tgPrev" class="pri" title="전체 카드가 재단 후 어떻게 나오는지 보기">전체 미리보기</button>
 </header>
 <main>
 <aside id="left">
@@ -512,7 +511,7 @@ function syncCard(){
   $('#sum').innerHTML=t.kinds?`${t.kinds}종 · 총 ${t.total}장 (단면 ${t.single}장 · 양면 ${t.dbl}장)`:'이미지를 넣으면 수량이 표시됩니다';
   document.querySelectorAll('#sideSeg button').forEach(x=>{x.classList.toggle('on',x.dataset.side===side);if(x.dataset.side==='back')x.textContent=state.commonBack?'뒷면(공통)':'뒷면'});
   $('#commonBack').checked=state.commonBack;
-  $('#tgGuide').classList.toggle('on',showGuides);$('#tgPrev').classList.toggle('on',preview);
+  $('#tgGuide').classList.toggle('on',showGuides);
   $('#hint').innerHTML=preview?'재단 후 완성 모습입니다':`<i class="c1">┅ 재단선</i><i>분홍 영역 = 잘려 나가는 여유</i>`}
 function refresh(){if(selId&&!sel())selId=null;
   if(!selId){const a=cur().layers.filter(l=>!l.hidden);if(a.length)selId=a[a.length-1].id} // 클릭하지 않아도 맨 위 이미지를 바로 조작
@@ -641,7 +640,7 @@ function openPreview(){const grid=$('#pvGrid'),t=totals();grid.innerHTML='';
   $('#pvConfirm').hidden=!t.kinds;
   $('#pv').hidden=false;document.body.style.overflow='hidden';$('#pvBody').scrollTop=0}
 function closePreview(){$('#pv').hidden=true;document.body.style.overflow=''}
-$('#tgPrev').onclick=openPreview;$('#pvBtn').onclick=openPreview;$('#saveBtn').onclick=openPreview;$('#pvClose').onclick=closePreview;
+$('#pvBtn').onclick=openPreview;$('#saveBtn').onclick=openPreview;$('#pvClose').onclick=closePreview;
 $('#cAdd').onclick=addCard;$('#cDel').onclick=delCard;$('#cLeft').onclick=()=>moveCard(-1);$('#cRight').onclick=()=>moveCard(1);
 
 /* ---------- 내보내기 ---------- */
