@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- © 2026 낭만인쇄소(위즈프로). All rights reserved. 이 에디터의 무단 복제·배포·사용을 금합니다. -->
 <html lang="ko">
 <head>
 <meta charset="utf-8">
@@ -177,17 +178,27 @@ button{touch-action:manipulation}
   .layer button{min-height:0;padding:6px 9px;font-size:13px}
   label.c input{width:20px;height:20px;min-height:0}
 }
+.brandTag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:0;color:var(--mut);border:1px solid var(--line);border-radius:10px;padding:1px 8px;margin-right:8px;vertical-align:2px}
+.copyR{color:var(--mut);font-size:11px;white-space:nowrap}
 </style>
 </head>
 <body>
+<script>
+// 이 에디터는 낭만인쇄소(위즈프로)의 것입니다. 정해진 주소에서만 동작합니다.
+const BRAND='낭만인쇄소';
+const BRAND_HOSTS=['garam-wispro.github.io','localhost','127.0.0.1']; // 정식 주소 외에 허용하는 곳(기존 주소, 내 PC 미리보기)
+const brandHostOk=h=>BRAND_HOSTS.includes(h)||h==='prtromance.com'||h.endsWith('.prtromance.com');
+const BRAND_OK=location.protocol==='file:'||brandHostOk(location.hostname);
+</script>
 <div id="inapp" hidden>앱 안의 화면에서는 파일 저장이 안 될 수 있습니다. 크롬이나 사파리에서 열어 주세요.
   <button id="inappBtn" hidden>기본 브라우저로 열기</button> <button id="inappCopy">주소 복사</button></div>
 <header>
-  <h1><b>포토카드</b> 에디터</h1>
+  <h1><span class="brandTag">낭만인쇄소</span><b>포토카드</b> 에디터</h1>
   <div class="seg" id="sideSeg"><button data-side="front" class="on">앞면</button><button data-side="back">뒷면</button></div>
   <button id="undo" title="Ctrl+Z">↶ 실행 취소</button>
   <button id="redo" title="Ctrl+Y">↷ 다시 실행</button>
   <div class="sp"></div>
+  <small class="pc copyR">© 낭만인쇄소 · 무단 복제·사용 금지</small>
   <div class="seg" id="themeSeg" title="작업 화면 색"><button data-t="light">화이트</button><button data-t="dark">블랙</button></div>
   <button id="tgGuide" class="on">가이드선</button>
 </header>
@@ -281,6 +292,7 @@ button{touch-action:manipulation}
 </div></div>
 
 <script>
+if(!BRAND_OK){document.body.innerHTML='<div style="padding:48px 20px;text-align:center;font:15px/1.9 sans-serif">이 에디터는 '+BRAND+' 전용입니다.<br>정식 주소에서 이용해 주세요.</div>';throw new Error('허용되지 않은 주소')}
 // 새 버전이 올라왔는데 브라우저가 옛 화면을 기억하고 있으면, 열자마자 한 번 새로 받아 온다
 (()=>{if(!/^https?:$/.test(location.protocol))return;
   fetch(location.pathname,{method:'HEAD',cache:'no-store'}).then(r=>{const lm=Date.parse(r.headers.get('last-modified')||''),cur=Date.parse(document.lastModified);
@@ -785,8 +797,8 @@ async function exportAll(){
       cells.push({label:textImg(`${dbl?'양면':'단면'} ${q}장`,56),arts})}
     status('파일로 묶는 중…');await new Promise(r=>setTimeout(r,0));
     const sum=`${t.kinds}종 · 총 ${t.total}장 (단면 ${t.single}장, 양면 ${t.dbl}장)`,n=new Date(),p2=v=>String(v).padStart(2,'0');
-    const header=textImg(`주문자 ${name}  ·  주문번호 ${ono}  ·  ${sum}`,48),base=`포토카드_${name}_${ono}_${t.kinds}종_${t.total}장`;
-    const sheet=['[포토카드 주문 내역]',`주문자명: ${name}`,`주문번호: ${ono}`,`작성일시: ${n.getFullYear()}-${p2(n.getMonth()+1)}-${p2(n.getDate())} ${p2(n.getHours())}:${p2(n.getMinutes())}`,
+    const header=textImg(`${BRAND}  ·  주문자 ${name}  ·  주문번호 ${ono}  ·  ${sum}`,48),base=`포토카드_${name}_${ono}_${t.kinds}종_${t.total}장`;
+    const sheet=['['+BRAND+' 포토카드 주문 내역]',`주문자명: ${name}`,`주문번호: ${ono}`,`작성일시: ${n.getFullYear()}-${p2(n.getMonth()+1)}-${p2(n.getDate())} ${p2(n.getHours())}:${p2(n.getMinutes())}`,
       `규격: 재단 ${SPEC.L}×${SPEC.S}mm / 대지 ${SPEC.FL}×${SPEC.FS}mm / 모서리 R${SPEC.radius}mm / 타공 없음`,`합계: ${sum}`,`해상도: ${dpi}dpi`,'색상: CMYK (Japan Color 2001 Coated 기준으로 변환)',
       '세로형 카드는 대지에 시계 반대 방향으로 90° 돌려 넣었습니다(카드 윗부분이 대지 왼쪽).','','번호 | 방향 | 인쇄 | 수량 | 대지',...rows,''].join('\r\n');
     const files=[{name:base+'.eps',data:buildSheet(cells,header,'photocard','eps')},{name:'주문내역.txt',data:new TextEncoder().encode('﻿'+sheet)}];
