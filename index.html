@@ -810,6 +810,8 @@ $('#expAll').onclick=exportAll;
 $('#pvOk').onclick=()=>{status('');$('#okDlg').hidden=false;const a=$('#oname');(a.value.trim()?$('#ono'):a).focus()};
 $('#okClose').onclick=()=>{if(!busy)$('#okDlg').hidden=true};
 $('#okDlg').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT'){e.preventDefault();exportAll()}});
+// 안내 메시지의 링크로 들어오면 주소의 주문번호(?ono=)를 주문번호 칸에 미리 넣는다. 이름 같은 개인정보는 주소로 받지 않는다
+try{const q=new URLSearchParams(location.search).get('ono')||'';if(/^[A-Za-z0-9_-]{4,40}$/.test(q))$('#ono').value=q}catch{}
 function setTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('pc_theme',t)}catch{}
   document.querySelectorAll('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));render()}
 document.querySelectorAll('#themeSeg button').forEach(b=>b.onclick=()=>setTheme(b.dataset.t));
