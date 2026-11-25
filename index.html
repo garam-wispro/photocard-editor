@@ -250,11 +250,11 @@ const BRAND_OK=location.protocol==='file:'||brandHostOk(location.hostname);
 </main>
 
 <div id="done" hidden><div class="box">
-  <b>파일이 준비됐습니다</b>
+  <b id="doneT">파일이 준비됐습니다</b>
   <div id="doneName"></div>
   <button class="pri full" id="doneSave">파일 저장</button>
   <button class="full" id="doneShare" hidden>공유하기 (카톡·메일 등)</button>
-  <small>저장한 ZIP 파일을 주문하신 곳으로 보내 주세요.</small>
+  <small id="doneS">저장한 ZIP 파일을 주문하신 곳으로 보내 주세요.</small>
   <button class="full" id="doneClose" style="margin-top:8px">닫기</button>
 </div></div>
 
@@ -288,7 +288,7 @@ const BRAND_OK=location.protocol==='file:'||brandHostOk(location.hostname);
   <div id="expStatus"></div>
   <button class="pri full" id="expAll">확인</button>
   <button class="full" id="okClose" style="margin-top:8px">닫기</button>
-  <small>확인을 누르면 제작용 파일(ZIP)이 저장됩니다.</small>
+  <small id="okNote">확인을 누르면 제작용 파일(ZIP)이 저장됩니다.</small>
 </div></div>
 
 <script>
@@ -762,13 +762,33 @@ function textImg(t,px){const c=document.createElement('canvas'),font=`700 ${px}p
   return toK(c)}
 function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),10000)}
 // PC는 바로 저장. 휴대폰은 만든 뒤 버튼을 직접 눌러 저장·공유하게 한다(자동 저장이 막히는 기기 대비).
-function deliver(blob,name){if(!COARSE)return download(blob,name);
+function deliver(blob,name){if(!COARSE)return download(blob,name);showDone(blob,name,false)}
+// sent=true면 자동 접수가 끝난 상태: 파일을 따로 보낼 필요가 없다고 알리고, 저장은 선택으로 둔다
+function showDone(blob,name,sent){
   let file=null,can=false;try{file=new File([blob],name,{type:'application/zip'});can=!!(navigator.canShare&&navigator.canShare({files:[file]}))}catch{}
-  $('#doneName').textContent=name;$('#doneSave').onclick=()=>download(blob,name);
-  $('#doneShare').hidden=!can;$('#doneShare').onclick=()=>navigator.share({files:[file],title:name}).catch(()=>{});
+  $('#doneT').textContent=sent?'디자인이 접수됐습니다':'파일이 준비됐습니다';
+  $('#doneS').textContent=sent?'접수가 확인되면 제작이 시작됩니다. 파일을 따로 보내지 않으셔도 됩니다.':'저장한 ZIP 파일을 주문하신 곳으로 보내 주세요.';
+  $('#doneName').textContent=name;$('#doneSave').textContent=sent?'내 기기에도 저장':'파일 저장';$('#doneSave').className=sent?'full':'pri full';
+  $('#doneSave').onclick=()=>download(blob,name);
+  $('#doneShare').hidden=sent||!can;$('#doneShare').onclick=()=>navigator.share({files:[file],title:name}).catch(()=>{});
   $('#done').hidden=false}
 const DPI=600; // 저장 해상도는 항상 600dpi
 const ZIP_PW='123123'; // 내려받는 ZIP의 압축 암호
+// 접수 프로그램(구글 Apps Script 웹 앱, 접수프로그램/Code.gs) 주소. 비워 두면 예전처럼 파일만 저장한다
+const RECEIVER='https://script.google.com/macros/s/AKfycbwlxvHDNU1NDHUb5N5vCrPTpQfgANjfgMxzjEz0uua-nYKtT7luFs7xhjBNhjJ7yMtRyw/exec';
+// 제작용 ZIP을 접수 프로그램이 내준 구글 드라이브 주소로 직접 올린 뒤, 접수 메일을 보내게 한다
+async function sendOrder(blob,fileName,meta){
+  const post=o=>fetch(RECEIVER,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o)}).then(r=>r.json());
+  const s=await post({action:'start',origin:location.origin,name:meta.name,ono:meta.ono,fileName,size:blob.size});
+  if(!s.ok)throw new Error(s.error||'접수를 시작하지 못했습니다');
+  const res=await new Promise((ok,no)=>{const x=new XMLHttpRequest();x.open('PUT',s.url);
+    x.upload.onprogress=e=>{if(e.lengthComputable)status(`보내는 중… ${Math.floor(e.loaded/e.total*100)}%`)};
+    x.onload=()=>x.status>=200&&x.status<300?ok(x.responseText):no(new Error('전송 실패('+x.status+')'));
+    x.onerror=()=>no(new Error('전송이 끊겼습니다'));x.send(blob)});
+  let fileId='';try{fileId=JSON.parse(res).id||''}catch{}
+  status('접수 확인 중…');
+  const d=await post({action:'done',token:s.token,fileId,summary:meta.summary,sheet:meta.sheet});
+  if(!d.ok)throw new Error(d.error||'접수를 확인하지 못했습니다')}
 const status=t=>{$('#expStatus').textContent=t};
 const pad=i=>String(i+1).padStart(Math.max(2,String(state.cards.length).length),'0');
 const hasBack=c=>(state.commonBack?state.common[c.orient]:c.back).layers.length>0;
@@ -802,10 +822,14 @@ async function exportAll(){
       `규격: 재단 ${SPEC.L}×${SPEC.S}mm / 대지 ${SPEC.FL}×${SPEC.FS}mm / 모서리 R${SPEC.radius}mm / 타공 없음`,`합계: ${sum}`,`해상도: ${dpi}dpi`,'색상: CMYK (Japan Color 2001 Coated 기준으로 변환)',
       '세로형 카드는 대지에 시계 반대 방향으로 90° 돌려 넣었습니다(카드 윗부분이 대지 왼쪽).','','번호 | 방향 | 인쇄 | 수량 | 대지',...rows,''].join('\r\n');
     const files=[{name:base+'.eps',data:buildSheet(cells,header,'photocard','eps')},{name:'주문내역.txt',data:new TextEncoder().encode('﻿'+sheet)}];
-    deliver(zipStore(files,ZIP_PW),base+'.zip');status('저장이 끝났습니다. 내려받은 ZIP 파일을 주문하신 곳으로 보내 주세요.')}
+    const zip=zipStore(files,ZIP_PW);let sent=false;
+    if(RECEIVER){status('보내는 중…');try{await sendOrder(zip,base+'.zip',{name,ono,summary:sum,sheet});sent=true}catch(err){console.warn('자동 접수 실패:',err)}}
+    if(sent){showDone(zip,base+'.zip',true);status('접수됐습니다. 파일을 따로 보내지 않으셔도 됩니다.')}
+    else{deliver(zip,base+'.zip');status((RECEIVER?'자동 접수가 되지 않았습니다. ':'저장이 끝났습니다. ')+'내려받은 ZIP 파일을 주문하신 곳으로 보내 주세요.')}}
   catch(err){status('');alert('내보내기 실패: '+err.message)}
   finally{busy=false;$('#expAll').disabled=false}}
 $('#expAll').onclick=exportAll;
+if(RECEIVER)$('#okNote').textContent='확인을 누르면 디자인이 자동으로 접수됩니다.';
 // 제작확정 → 주문자명·주문번호를 적고 확인을 누르면 파일을 받는다
 $('#pvOk').onclick=()=>{status('');$('#okDlg').hidden=false;const a=$('#oname');(a.value.trim()?$('#ono'):a).focus()};
 $('#okClose').onclick=()=>{if(!busy)$('#okDlg').hidden=true};

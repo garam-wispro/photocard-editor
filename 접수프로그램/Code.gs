@@ -2,14 +2,14 @@
  * 포토카드 에디터 접수 프로그램 (Google Apps Script 웹 앱, prtromance@gmail.com 계정)
  * 에디터가 만든 제작용 ZIP을 구글 드라이브로 받고, 접수 메일을 보낸다.
  * 권한은 최소로 둔다: 이 프로그램이 만든 드라이브 파일만(drive.file), 메일 보내기, 외부 요청.
- * 메일 라벨은 지메일 필터(제목에 "[포토카드 시안]")로 붙인다.
+ * 메일 라벨은 지메일 필터(받는사람 prtromance+editor@gmail.com)로 붙인다.
  *
  * 흐름: ① 에디터가 start 요청 → 드라이브 업로드 주소와 접수표(token)를 돌려준다
  *       ② 에디터가 그 주소로 파일을 직접 올린다(파일은 이 프로그램을 거치지 않는다)
  *       ③ 에디터가 done 요청 → 파일을 확인하고 접수 메일을 보낸다
  */
 const CFG = {
-  notify: 'prtromance@gmail.com',
+  notify: 'prtromance+editor@gmail.com', // +editor 주소로 보내 지메일 필터가 이 메일만 정확히 골라 라벨을 붙이게 한다
   subjectTag: '[포토카드 시안]',
   rootName: '포토카드 시안 접수',
   origins: ['https://photocard.prtromance.com', 'http://localhost:8770'],
