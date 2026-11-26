@@ -134,6 +134,7 @@ button{touch-action:manipulation}
 #done[hidden]{display:none}
 #done .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;width:100%;max-width:360px}
 #doneName{color:var(--mut);font-size:12px;margin:6px 0 12px;word-break:break-all}
+#doneS.msg{white-space:pre-line;font-size:15px;line-height:1.7;color:var(--fg);text-align:center;margin:6px 0 14px}
 #pv{position:fixed;inset:0;z-index:20;background:var(--pvbg);display:flex;flex-direction:column}
 #pv[hidden]{display:none}
 #pvBar{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
@@ -286,8 +287,8 @@ const BRAND_OK=location.protocol==='file:'||brandHostOk(location.hostname);
   <label class="f">주문번호 <em>(필수)</em><input type="text" id="ono" maxlength="30" placeholder="쇼핑몰 주문번호" inputmode="numeric"></label>
   <div id="total"></div>
   <div id="expStatus"></div>
-  <button class="pri full" id="expAll">확인</button>
-  <button class="full" id="okClose" style="margin-top:8px">닫기</button>
+  <button class="pri full" id="expAll">제작확정하기</button>
+  <button class="full" id="okClose" style="margin-top:8px">취소</button>
   <small id="okNote">확인을 누르면 제작용 파일(ZIP)이 저장됩니다.</small>
 </div></div>
 
@@ -760,12 +761,27 @@ function deliver(blob,name){if(!COARSE)return download(blob,name);showDone(blob,
 // sent=true면 자동 접수가 끝난 상태: 파일을 따로 보낼 필요가 없다고 알리고, 저장은 선택으로 둔다
 function showDone(blob,name,sent){
   let file=null,can=false;try{file=new File([blob],name,{type:'application/zip'});can=!!(navigator.canShare&&navigator.canShare({files:[file]}))}catch{}
-  $('#doneT').textContent=sent?'디자인이 접수됐습니다':'파일이 준비됐습니다';
-  $('#doneS').textContent=sent?'접수가 확인되면 제작이 시작됩니다. 파일을 따로 보내지 않으셔도 됩니다.':'저장한 ZIP 파일을 주문하신 곳으로 보내 주세요.';
-  $('#doneName').textContent=name;$('#doneSave').textContent=sent?'내 기기에도 저장':'파일 저장';$('#doneSave').className=sent?'full':'pri full';
+  if(sent){ // 접수 완료: 안내문과 확인 버튼만 보이고, 확인하면 에디터를 끝낸다
+    $('#doneT').hidden=$('#doneName').hidden=$('#doneSave').hidden=$('#doneShare').hidden=true;
+    $('#doneS').textContent=DONE_MSG;$('#doneS').className='msg';
+    $('#doneClose').textContent='확인';$('#doneClose').className='pri full';$('#doneClose').onclick=finish;
+    $('#done').hidden=false;return}
+  $('#doneT').textContent='파일이 준비됐습니다';
+  $('#doneS').textContent='저장한 ZIP 파일을 주문하신 곳으로 보내 주세요.';
+  $('#doneName').textContent=name;$('#doneSave').textContent='파일 저장';$('#doneSave').className='pri full';
   $('#doneSave').onclick=()=>download(blob,name);
-  $('#doneShare').hidden=sent||!can;$('#doneShare').onclick=()=>navigator.share({files:[file],title:name}).catch(()=>{});
+  $('#doneShare').hidden=!can;$('#doneShare').onclick=()=>navigator.share({files:[file],title:name}).catch(()=>{});
   $('#done').hidden=false}
+const DONE_MSG=`네! 제작 기간은
+영업일 기준 1~2일정도 소요됩니다.^^b
+( 단, 수량에 따라 차이는 있습니다! )
+총알같이 빠른 제작 진행 하겠습니다~
+감사합니다~♥`;
+// 창을 닫는다. 브라우저가 닫기를 막으면(직접 연 탭) 다시 접수되지 않게 에디터를 끝 화면으로 바꾼다
+function finish(){try{window.close()}catch{}
+  setTimeout(()=>{$('#done').hidden=true;const e=document.createElement('div');
+    e.style.cssText='position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:16px;line-height:1.7;color:#333';
+    e.innerHTML='접수가 완료됐습니다.<br>이 창을 닫으셔도 됩니다.';document.body.appendChild(e)},300)}
 const DPI=600; // 저장 해상도는 항상 600dpi
 const ZIP_PW='123123'; // 내려받는 ZIP의 압축 암호
 // 접수 프로그램(구글 Apps Script 웹 앱, 접수프로그램/Code.gs) 주소. 비워 두면 예전처럼 파일만 저장한다
@@ -823,7 +839,7 @@ async function exportAll(){
   catch(err){status('');alert('내보내기 실패: '+err.message)}
   finally{busy=false;$('#expAll').disabled=false}}
 $('#expAll').onclick=exportAll;
-if(RECEIVER)$('#okNote').textContent='확인을 누르면 디자인이 자동으로 접수됩니다.';
+if(RECEIVER)$('#okNote').textContent='제작확정하기를 누르면 디자인이 자동으로 접수됩니다.';
 // 제작확정 → 주문자명·주문번호를 적고 확인을 누르면 파일을 받는다
 $('#pvOk').onclick=()=>{status('');$('#okDlg').hidden=false;const a=$('#oname');(a.value.trim()?$('#ono'):a).focus()};
 $('#okClose').onclick=()=>{if(!busy)$('#okDlg').hidden=true};
