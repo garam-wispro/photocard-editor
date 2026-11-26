@@ -492,14 +492,8 @@ const FIELDS={ // 화면 입력칸 ↔ 이미지 값. 위치는 카드 정가운
 function buildProps(){
   if(!sel()){props.innerHTML='<div class="empty">이미지를 추가하면 여기서 위치와 크기를 조절할 수 있습니다.</div>';return}
   props.innerHTML=`<div class="dpi" id="dpiInfo"></div>
-  <div class="row"><button data-act="cover">카드 채우기</button><button data-act="contain">전체 보이기</button></div>
-  <div class="row">${F('가로 위치(mm)','px',{step:.5})}${F('세로 위치(mm)','py',{step:.5})}</div>
-  <small style="margin:-2px 0 6px">0 / 0 = 카드 정가운데 (＋는 오른쪽·아래)</small>
-  <div class="row">${F('가로 크기(mm)','sw',{step:.5,min:1})}${F('세로 크기(mm)','sh',{step:.5,min:1})}</div>
-  <div class="row" style="align-items:flex-end"><label class="c" style="padding-bottom:6px"><input type="checkbox" data-k="lock">비율 고정</label>${F('회전(°)','rot')}</div>
   <div class="row"><button data-act="crop" class="${cropMode?'on':''}">${cropMode?'자르기 끝내기':'✂ 자르기'}</button><button data-act="uncrop">자르기 해제</button></div>
   ${cropMode?'<small style="margin:-2px 0 6px;color:var(--warnfg)">노란 점을 끌어 남길 부분을 정하세요.</small>':''}
-  <div class="row"><label class="c"><input type="checkbox" data-k="gray">흑백</label></div>
   <div class="row"><button data-act="cH">가로 중앙</button><button data-act="cV">세로 중앙</button></div>
   <div class="row"><button data-act="aT">상단 맞춤</button><button data-act="aB">하단 맞춤</button></div>
   <div class="row"><button data-act="fitW">가로폭 맞추기</button><button data-act="fitH">세로폭 맞추기</button></div>
