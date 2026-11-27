@@ -33,6 +33,7 @@ aside{width:270px;flex:none;background:var(--panel);overflow-y:auto;padding:12px
 #gapWarn{position:absolute;left:50%;top:10px;transform:translateX(-50%);width:max-content;max-width:calc(100% - 24px);background:var(--warnbg);color:var(--warnfg);border:1px solid var(--warnfg);border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;line-height:1.5;text-align:center;pointer-events:none;z-index:2}
 #gapWarn[hidden]{display:none}
 #hint i{font-style:normal;display:inline-block;margin:0 8px}
+.rot90{position:absolute;bottom:4px;z-index:2;padding:7px 12px;font-size:13px;font-weight:700;background:var(--panel)}#rotL{left:10px}#rotR{right:10px}.rot90[hidden]{display:none}
 #hint .c1{color:var(--acc)}#hint .c2{color:var(--acc2)}
 #drop{position:absolute;inset:12px;border:2px dashed var(--acc);border-radius:14px;background:rgba(255,77,141,.08);display:none;align-items:center;justify-content:center;font-size:18px;pointer-events:none}
 #stage.over #drop{display:flex}
@@ -230,6 +231,7 @@ const BRAND_OK=location.protocol==='file:'||brandHostOk(location.hostname);
     <button id="fab" class="pri">＋ 이미지</button>
     <div id="drop">이미지를 여기에 놓으세요</div>
     <div id="hint"></div>
+    <button id="rotL" class="rot90" title="왼쪽으로 90도">↺ 90°</button><button id="rotR" class="rot90" title="오른쪽으로 90도">90° ↻</button>
     <div id="gapWarn" hidden>⚠ 채워지지 않은 여백이 있습니다. 여백은 흰색으로 인쇄되니 주의해 주세요.</div>
   </div>
   <div id="strip">
@@ -523,8 +525,10 @@ function syncCard(){
 function refresh(){if(selId&&!sel())selId=null;
   if(!selId){const a=cur().layers.filter(l=>!l.hidden);if(a.length)selId=a[a.length-1].id} // 클릭하지 않아도 맨 위 이미지를 바로 조작
   if(cropMode&&cropFor!==selId)cropMode=false;
-  syncCard();buildProps();buildLayers();syncStrip();render()}
+  syncCard();buildProps();buildLayers();syncStrip();render();$('#rotL').hidden=$('#rotR').hidden=preview||!sel()}
 
+// 선택한 이미지를 90도씩 돌린다(왼쪽 -90, 오른쪽 +90)
+[['#rotL',-90],['#rotR',90]].forEach(([id,d])=>$(id).onclick=()=>{const l=sel();if(!l)return;l.rot=((Math.round(l.rot/90)*90+d)%360+360)%360;commit();syncProps();render()});
 props.addEventListener('input',e=>{const t=e.target,l=sel(),k=t.dataset.k;if(!l||!k)return;let v;
   if(t.type==='checkbox')l[k]=t.checked;else{v=parseFloat(t.value);if(isNaN(v))return;FIELDS[k].set(l,v)}
   syncProps(t);render()});
